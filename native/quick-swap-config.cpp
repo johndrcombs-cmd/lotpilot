@@ -490,7 +490,7 @@ int runGui(int argc, char **argv) {
     if (!store.isAvailable()) {
         QMessageBox::critical(
             nullptr,
-            QStringLiteral("Quick Swap Tools"),
+            QStringLiteral("LotPilot"),
             QStringLiteral("KDE Global Shortcuts is unavailable. Log into a KDE Plasma session and try again."));
         return 1;
     }
@@ -502,7 +502,7 @@ int runGui(int argc, char **argv) {
         || !store.read(kGiveaway, &savedGiveaway, &readError)) {
         QMessageBox::critical(
             nullptr,
-            QStringLiteral("Quick Swap Tools"),
+            QStringLiteral("LotPilot"),
             QStringLiteral("Could not read the current KDE shortcuts: %1").arg(readError));
         return 1;
     }
@@ -514,7 +514,7 @@ int runGui(int argc, char **argv) {
         : savedGiveaway.first();
 
     QDialog dialog;
-    dialog.setWindowTitle(QStringLiteral("Quick Swap Tools — Controls"));
+    dialog.setWindowTitle(QStringLiteral("LotPilot — Controls"));
     dialog.setMinimumSize(660, 680);
     dialog.resize(700, 720);
 
@@ -522,7 +522,7 @@ int runGui(int argc, char **argv) {
     layout->setContentsMargins(28, 26, 28, 24);
     layout->setSpacing(14);
 
-    auto *eyebrow = new QLabel(QStringLiteral("QUICK SWAP TOOLS"));
+    auto *eyebrow = new QLabel(QStringLiteral("LOTPILOT"));
     eyebrow->setObjectName(QStringLiteral("eyebrow"));
     layout->addWidget(eyebrow);
 
@@ -635,7 +635,7 @@ int runGui(int argc, char **argv) {
                 QStringLiteral(
                     "At least one binding has no modifier. KDE cannot tell "
                     "your Tartarus from your main keyboard, so that key would trigger "
-                    "Quick Swap Tools everywhere. Save it anyway?"),
+                    "LotPilot everywhere. Save it anyway?"),
                 QMessageBox::Save | QMessageBox::Cancel,
                 QMessageBox::Cancel);
             if (answer != QMessageBox::Save) {

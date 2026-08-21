@@ -1,10 +1,13 @@
 # Contributing
 
-Thanks for helping improve Quick Swap Tools.
+Thanks for helping improve LotPilot.
 
 ## Development setup
 
-Quick Swap Tools currently targets x86-64 Linux with KDE Plasma 6 and Firefox 140 or newer. Native builds require Qt 6, KDE Frameworks 6 GlobalAccel, a C++20 compiler, Python 3, Node.js 20+, and pnpm.
+LotPilot currently targets x86-64 Linux with KDE Plasma 6 and 64-bit Windows
+10/11, using Firefox 140 or newer. Linux native builds require Qt 6, KDE
+Frameworks 6 GlobalAccel, a C++20 compiler, Python 3, Node.js 20+, and pnpm;
+Windows cross-builds additionally require MinGW-w64.
 
 ```bash
 pnpm install

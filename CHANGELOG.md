@@ -1,8 +1,17 @@
 # Changelog
 
-All notable changes to Quick Swap Tools are documented here.
+All notable changes to LotPilot are documented here.
 
 ## Unreleased
+
+## 0.2.0 — 2026-08-21
+
+- Rebrand Quick Swap Tools as LotPilot, with the tagline “Hands-free controls
+  for Whatnot live sellers,” while preserving the Firefox extension ID, native
+  messaging host name, KDE action IDs, legacy install roots, and saved hotkeys.
+- Rename new Linux, Windows, and Firefox artifacts for LotPilot. The signed
+  Quick Swap Tools 0.1.0 XPI remains a clearly labeled compatibility artifact
+  until Mozilla signs the branded 0.2.0 source.
 
 - Add device-filtered iKKEGOL B0CD3ZS7G2 triple-pedal support on Linux and
   Windows for USB IDs `3553:b001` and `1a86:e026`: factory A/B/C maps to

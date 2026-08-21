@@ -1,12 +1,18 @@
 # Firefox signing and distribution
 
-Quick Swap Tools uses Mozilla's **unlisted/self-distributed** signing channel for its first releases. The signed XPI can be installed in Firefox Release without `about:debugging` and shared directly with trusted friends. It does not appear publicly in AMO search.
+LotPilot uses Mozilla's **unlisted/self-distributed** signing channel for its first releases. The signed XPI can be installed in Firefox Release without `about:debugging` and shared directly with trusted friends. It does not appear publicly in AMO search.
+
+The branded source is version 0.2.0, but no signed LotPilot 0.2.0 XPI exists
+yet. The signed Quick Swap Tools 0.1.0 XPI remains only a compatibility artifact;
+it has the correct stable ID but no longer matches the branded source manifest.
+Run the signing flow below with AMO credentials before creating a source-matching
+LotPilot release artifact.
 
 Mozilla's current requirements:
 
 - Firefox Release and Beta require Mozilla-signed extensions.
 - Signing is performed through addons.mozilla.org even for self-distribution.
-- New extensions must declare their data-collection behavior. Quick Swap Tools declares `required: ["none"]` because all routing and Whatnot interaction stay on the user's computer.
+- New extensions must declare their data-collection behavior. LotPilot declares `required: ["none"]` because all routing and Whatnot interaction stay on the user's computer.
 - The signed release requires Firefox desktop 140 or newer so Firefox can display that built-in no-data-collection declaration.
 - Every update must use the same extension ID and a higher manifest version.
 
@@ -48,20 +54,20 @@ pnpm run sign:unlisted
 
 The script prompts for the JWT issuer and secret. Secret input is hidden, is not stored, and is passed to `web-ext` through environment variables rather than command-line arguments. The signed XPI is written to `dist/signed/`.
 
-For the initial version, Mozilla may return the signed XPI immediately or hold it for review. If review is required, AMO sends email when signing completes; download the signed file from **Developer Hub → My Add-ons → Quick Swap Tools → View all versions**.
+For 0.2.0, Mozilla may return the signed XPI immediately or hold it for review. If review is required, AMO sends email when signing completes; download the signed file from **Developer Hub → My Add-ons → LotPilot → View all versions**.
 
 ## Install the signed build locally
 
 The signed XPI and native host must use the same extension ID.
 
 1. Run `./scripts/install.sh` to update the native-host manifest.
-2. Remove the temporary Quick Swap Tools entry from `about:debugging` if it is still loaded.
+2. Remove the temporary LotPilot entry from `about:debugging` if it is still loaded.
 3. Open the signed `.xpi` in Firefox and approve installation.
 4. Confirm `quick-swap-host` is running and test only against a private stream.
 
 ## Sharing with friends
 
-The signed XPI solves Firefox's extension-signing requirement, but Quick Swap Tools also needs its small native host for KDE global shortcuts. For the current source distribution, a friend must:
+The signed XPI solves Firefox's extension-signing requirement, but LotPilot also needs its small native host for KDE global shortcuts. For the current source distribution, a friend must:
 
 1. Use Linux with KDE Plasma/Wayland and Firefox.
 2. Install the Qt 6 and KDE Frameworks 6 GlobalAccel runtime/build prerequisites.

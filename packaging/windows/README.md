@@ -1,4 +1,4 @@
-# Quick Swap Tools for Windows — development bundle
+# LotPilot for Windows — development bundle
 
 This bundle targets **64-bit Windows 10/11** and **Firefox**. It installs only for the current Windows user and does not request administrator access.
 
@@ -14,10 +14,15 @@ This bundle targets **64-bit Windows 10/11** and **Firefox**. It installs only f
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -AllowUnsignedDevelopment
    ```
 
-4. In Firefox, press **Ctrl+O**, select the included `Quick-Swap-Tools-*-firefox.xpi`, and approve **Add**.
-5. Open **Quick Swap Tools** from the Windows Start Menu to configure controls.
+4. In Firefox, press **Ctrl+O**, select the included `LotPilot-*-firefox.xpi`, and approve **Add**.
+5. Open **LotPilot** from the Windows Start Menu to configure controls.
 
-The installer verifies every payload checksum, the extension ID, and expected Mozilla XPI signature metadata before writing anything. Firefox performs the authoritative cryptographic extension-signature check when you add the XPI. The installer installs under `%LOCALAPPDATA%\Programs\Quick Swap Tools`, registers the Firefox native host under the current user's Mozilla registry key, and creates one Start Menu shortcut.
+The installer verifies every payload checksum, the extension ID, and expected Mozilla XPI signature metadata before writing anything. Firefox performs the authoritative cryptographic extension-signature check when you add the XPI. The installer retains `%LOCALAPPDATA%\Programs\Quick Swap Tools` as a legacy compatibility internal, registers the Firefox native host under the current user's Mozilla registry key, and creates the user-visible **LotPilot** Start Menu shortcut.
+
+Until Mozilla signs the branded 0.2.0 source, the included file may be named
+`LotPilot-0.1.0-legacy-signed-compat-firefox.xpi`. It is the genuine old signed
+0.1.0 package, so Firefox displays its old Quick Swap Tools name. It preserves
+update compatibility but must not be mistaken for a signed branded build.
 
 ## Default controls
 
@@ -38,7 +43,7 @@ To rebind a control, click its binding, press the desired key or key combination
 The built-in Logitech R400 profile is automatic and device-specific. It accepts
 Previous and Next only from the R400 receiver's `VID_046D`, `PID_C538`, `MI_00`
 keyboard interface, so Page Up/Page Down from another keyboard do not trigger
-Quick Swap Tools. Start Slideshow, Black Screen, and Laser are intentionally
+LotPilot. Start Slideshow, Black Screen, and Laser are intentionally
 unassigned. Windows still delivers the R400's ordinary Page Up/Page Down keys to
 the foreground application. Page Up and Page Down are reserved and cannot also
 be configured as global hotkeys, preventing one R400 press from producing
@@ -50,12 +55,12 @@ The iKKEGOL model `10149C` (ASIN `B0CD3ZS7G2`) works without programming. The
 device-filtered Raw Input profile accepts only known USB IDs `3553:b001` and
 `1a86:e026`: **A = Auction**, **B = Inspect** (the existing safe no-click
 command), and **C = Giveaway**. Windows still delivers those normal keyboard
-events to the foreground application; Quick Swap Tools does not use
+events to the foreground application; LotPilot does not use
 `RIDEV_NOLEGACY`.
 
 For optional one-time changes, use iKKEGOL's official Windows **FootSwitch**
 software. It writes the mapping to pedal firmware, where it persists across
-reboots and computers. Quick Swap Tools also recognizes the convention
+reboots and computers. LotPilot also recognizes the convention
 **F20 = Auction**, **F22 = Inspect**, **F21 = Giveaway**, but output above F12
 is firmware-dependent and is not guaranteed on every revision. The shipped
 A/B/C defaults are recommended. Opening the configurator never writes hardware,
@@ -70,7 +75,7 @@ SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=
 
 ### Tartarus, macro pads, and controllers
 
-Quick Swap Tools records the keyboard key emitted by a device. `F13`–`F24` are recommended for a Razer Tartarus or other macro pad. If two physical keyboards emit the same key, the normal Windows global-hotkey API cannot distinguish which device produced it. Map gamepad, HID-only, or vendor-only buttons to keyboard keys before recording them.
+LotPilot records the keyboard key emitted by a device. `F13`–`F24` are recommended for a Razer Tartarus or other macro pad. If two physical keyboards emit the same key, the normal Windows global-hotkey API cannot distinguish which device produced it. Map gamepad, HID-only, or vendor-only buttons to keyboard keys before recording them.
 
 ## Uninstall
 
@@ -80,10 +85,13 @@ Close Firefox, then run:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\Quick Swap Tools\uninstall.ps1"
 ```
 
-The uninstaller verifies that the manifest, registry entry, and Start Menu shortcut belong to this installation before deleting them. It removes only Quick Swap Tools' four owned shortcut-setting values and preserves unrelated values or subkeys. Remove the Firefox extension separately from `about:addons` if it is no longer wanted.
+The uninstaller verifies that the manifest, registry entry, and Start Menu shortcut belong to this installation before deleting them. It accepts strict ownership markers and shortcut properties from both pre-rebrand Quick Swap Tools installs and new LotPilot installs. It removes only the four owned shortcut-setting values and preserves unrelated values or subkeys. Remove the Firefox extension separately from `about:addons` if it is no longer wanted.
 
 ## Signing status
 
-The included immutable Firefox XPI is Mozilla-signed. The Windows executables and development ZIP are not yet Authenticode-signed. Do not relabel this development artifact as a production release.
+The included 0.1.0 compatibility XPI is Mozilla-signed; no signed branded 0.2.0
+XPI exists yet. The Windows executables and development ZIP are not yet
+Authenticode-signed. Do not relabel this development artifact as a production
+release.
 
 Third-party license notices for the vendored JSON for Modern C++ parser are included in `THIRD_PARTY_NOTICES.md`.

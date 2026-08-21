@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quick Swap Tools native-messaging bridge and command client."""
+"""LotPilot native-messaging bridge and command client."""
 
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def send_action(
             client.connect(str(target))
         except FileNotFoundError as exc:
             raise ConnectionError(
-                "Quick Swap bridge is offline; load the Firefox extension first"
+                "LotPilot bridge is offline; load the Firefox extension first"
             ) from exc
         client.sendall(json.dumps(request, separators=(",", ":")).encode() + b"\n")
         received = bytearray()
@@ -93,7 +93,7 @@ def send_action(
             if len(received) > 65_536:
                 raise ValueError("bridge response exceeds 64 KiB safety limit")
     if not received:
-        raise ConnectionError("Quick Swap bridge closed without a response")
+        raise ConnectionError("LotPilot bridge closed without a response")
     response = json.loads(received.split(b"\n", 1)[0])
     if not isinstance(response, dict):
         raise ValueError("bridge response must be a JSON object")
@@ -205,16 +205,16 @@ def main(argv: list[str] | None = None) -> int:
         result = send_action(args.action)
     except Exception as exc:
         if args.notify:
-            _notify("Quick Swap failed", str(exc), urgency="critical")
+            _notify("LotPilot failed", str(exc), urgency="critical")
         if not args.quiet:
             print(json.dumps({"ok": False, "error": str(exc)}))
         return 1
 
     if args.notify:
         if result.get("ok"):
-            _notify("Quick Swap", str(result.get("message", "Action sent")))
+            _notify("LotPilot", str(result.get("message", "Action sent")))
         else:
-            _notify("Quick Swap failed", str(result.get("error", "Unknown error")), urgency="critical")
+            _notify("LotPilot failed", str(result.get("error", "Unknown error")), urgency="critical")
     if not args.quiet:
         print(json.dumps(result, separators=(",", ":")))
     return 0 if result.get("ok") else 1

@@ -2,7 +2,6 @@
 set -euo pipefail
 
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-VERSION=${1:-0.2.0-dev}
 OUTPUT_ROOT=${2:-"$ROOT/dist/windows"}
 
 PYTHON=
@@ -17,19 +16,23 @@ if [[ -z $PYTHON ]]; then
   printf 'Python 3 is required to build the Windows bundle\n' >&2
   exit 1
 fi
+PACKAGE_VERSION=$("$PYTHON" -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
+  "$ROOT/package.json")
+VERSION=${1:-$PACKAGE_VERSION}
 
 "$ROOT/scripts/build-windows.sh" >/dev/null
 
 shopt -s nullglob
-XPI_FILES=("$ROOT"/dist/release/Quick-Swap-Tools-*-firefox.xpi)
+XPI_FILES=("$ROOT"/dist/release/LotPilot-*-firefox.xpi "$ROOT"/dist/release/Quick-Swap-Tools-*-firefox.xpi)
 shopt -u nullglob
 [[ ${#XPI_FILES[@]} -eq 1 ]] || {
   printf 'Expected exactly one Mozilla-signed Firefox XPI in dist/release\n' >&2
   exit 1
 }
 
-"$PYTHON" - "${XPI_FILES[0]}" <<'PY'
+XPI_STAGE_NAME=$("$PYTHON" - "${XPI_FILES[0]}" <<'PY'
 import json
+import pathlib
 import sys
 import zipfile
 
@@ -48,7 +51,13 @@ with zipfile.ZipFile(path) as archive:
     extension_id = manifest["browser_specific_settings"]["gecko"]["id"]
     if extension_id != "quick-swap-tools@onibyts.com":
         raise SystemExit("The Firefox XPI has the wrong extension ID")
+    source_name = pathlib.Path(path).name
+    if source_name.startswith("LotPilot-"):
+        print(source_name)
+    else:
+        print(f"LotPilot-{manifest['version']}-legacy-signed-compat-firefox.xpi")
 PY
+)
 
 mkdir -p "$OUTPUT_ROOT"
 OUTPUT_ROOT=$(cd -- "$OUTPUT_ROOT" && pwd)
@@ -62,9 +71,9 @@ install -m 0644 "$ROOT/packaging/windows/uninstall.ps1" "$STAGE/uninstall.ps1"
 install -m 0644 "$ROOT/packaging/windows/README.md" "$STAGE/README.md"
 install -m 0644 "$ROOT/LICENSE" "$STAGE/LICENSE"
 install -m 0644 "$ROOT/THIRD_PARTY_NOTICES.md" "$STAGE/THIRD_PARTY_NOTICES.md"
-install -m 0644 "${XPI_FILES[0]}" "$STAGE/${XPI_FILES[0]##*/}"
+install -m 0644 "${XPI_FILES[0]}" "$STAGE/$XPI_STAGE_NAME"
 
-"$PYTHON" - "$STAGE" "${XPI_FILES[0]##*/}" <<'PY'
+"$PYTHON" - "$STAGE" "$XPI_STAGE_NAME" <<'PY'
 import hashlib
 import pathlib
 import sys
@@ -84,7 +93,7 @@ lines = [f"{hashlib.sha256((stage / name).read_bytes()).hexdigest()}  {name}\n" 
 (stage / "SHA256SUMS").write_bytes("".join(lines).encode("utf-8"))
 PY
 
-ARCHIVE="$OUTPUT_ROOT/quick-swap-tools-${VERSION}-windows-x86_64-development.zip"
+ARCHIVE="$OUTPUT_ROOT/lotpilot-${VERSION}-windows-x86_64-development.zip"
 rm -f "$ARCHIVE"
 "$PYTHON" - "$STAGE" "$ARCHIVE" <<'PY'
 import pathlib

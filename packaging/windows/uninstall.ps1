@@ -7,19 +7,18 @@ $ErrorActionPreference = "Stop"
 $HostName = "com.onibyts.quickswap"
 $ExtensionId = "quick-swap-tools@onibyts.com"
 $InstallRoot = $PSScriptRoot
+# These roots are stable compatibility internals from the pre-rebrand bundle.
 $ExpectedInstallRoot = Join-Path $env:LOCALAPPDATA "Programs\Quick Swap Tools"
 $ExpectedHost = Join-Path $InstallRoot "quick-swap-tools.exe"
 $ExpectedConfig = Join-Path $InstallRoot "quick-swap-config.exe"
-$ExpectedShortcutDescription = "Configure Quick Swap Tools auction and giveaway controls"
 $ManifestPath = Join-Path $InstallRoot "$HostName.json"
 $OwnerPath = Join-Path $InstallRoot "install-owner.json"
 $RegistryPath = "HKCU:\Software\Mozilla\NativeMessagingHosts\$HostName"
 $SettingsPath = "HKCU:\Software\OniByts\Quick Swap Tools"
 $StartMenuDirectory = [Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)
-$ShortcutPath = Join-Path $StartMenuDirectory "Quick Swap Tools.lnk"
 
 function Refuse([string]$Message) {
-    throw "Quick Swap Tools: Refusing to uninstall: $Message"
+    throw "LotPilot: Refusing to uninstall: $Message"
 }
 
 function Assert-SafeLocalPath([string]$Path, [string]$Description) {
@@ -63,8 +62,17 @@ if (-not (Test-Path -LiteralPath $OwnerPath -PathType Leaf)) {
     Refuse "the installation ownership marker is missing"
 }
 $Owner = Get-Content -LiteralPath $OwnerPath -Raw | ConvertFrom-Json
-if ($Owner.schema -ne 1 -or $Owner.product -ne "Quick Swap Tools" -or $Owner.host -ne $HostName) {
+if ($Owner.schema -ne 1 -or
+    @("LotPilot", "Quick Swap Tools") -notcontains $Owner.product -or
+    $Owner.host -ne $HostName) {
     Refuse "the installation ownership marker does not match this product"
+}
+$LegacyInstall = $Owner.product -eq "Quick Swap Tools"
+$ShortcutPath = Join-Path $StartMenuDirectory $(if ($LegacyInstall) { "Quick Swap Tools.lnk" } else { "LotPilot.lnk" })
+$ExpectedShortcutDescription = if ($LegacyInstall) {
+    "Configure Quick Swap Tools auction and giveaway controls"
+} else {
+    "Configure LotPilot auction and giveaway controls"
 }
 $OwnedFiles = @($Owner.files)
 $FixedFiles = @(
@@ -79,7 +87,9 @@ foreach ($Name in $FixedFiles) {
         Refuse "the ownership file list is missing $Name"
     }
 }
-$OwnedXpi = @($OwnedFiles | Where-Object { $_ -like "Quick-Swap-Tools-*-firefox.xpi" })
+$OwnedXpi = @($OwnedFiles | Where-Object {
+    $_ -like "LotPilot-*-firefox.xpi" -or $_ -like "Quick-Swap-Tools-*-firefox.xpi"
+})
 if ($OwnedXpi.Count -ne 1) {
     Refuse "the ownership file list does not identify exactly one Firefox extension"
 }
@@ -133,10 +143,10 @@ foreach ($Process in $RunningHosts) {
         $ProcessPath = $Process.Path
     }
     catch {
-        Refuse "a running Quick Swap Tools process could not be verified"
+        Refuse "a running LotPilot process could not be verified"
     }
     if ([string]::IsNullOrEmpty($ProcessPath)) {
-        Refuse "a running Quick Swap Tools process could not be verified"
+        Refuse "a running LotPilot process could not be verified"
     }
     if ([string]::Equals(
             $ProcessPath,
@@ -168,4 +178,4 @@ if (Test-Path -LiteralPath $SettingsPath) {
 }
 
 Remove-Item -LiteralPath $InstallRoot -Recurse -Force
-Write-Host "Quick Swap Tools was removed. Remove the Firefox extension from about:addons if you no longer want it."
+Write-Host "LotPilot was removed. Remove the Firefox extension from about:addons if you no longer want it."

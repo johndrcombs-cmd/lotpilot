@@ -790,7 +790,7 @@ private:
             QProcess::startDetached(
                 QStringLiteral("notify-send"),
                 {QStringLiteral("--urgency"), QStringLiteral("critical"),
-                 QStringLiteral("Quick Swap failed"), error});
+                 QStringLiteral("LotPilot failed"), error});
         }
         if (type == QStringLiteral("result")) {
             QJsonObject persistedMessage{

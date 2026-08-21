@@ -1,6 +1,10 @@
-# Quick Swap Tools 0.1.0 — Linux KDE bundle
+# LotPilot 0.2.0 — Linux KDE bundle
 
 This bundle installs the native KDE shortcut host and includes the Mozilla-signed Firefox extension.
+
+> A branded signed 0.2.0 XPI has not been produced yet, so this release bundle
+> cannot be built or published until Mozilla signing succeeds. The old signed
+> 0.1.0 compatibility XPI does not match the branded source.
 
 ## Requirements
 
@@ -23,9 +27,9 @@ Download both the `.tar.gz` bundle and its `.sha256` sidecar from the GitHub
 release, then verify the download before extracting it:
 
 ```bash
-sha256sum -c quick-swap-tools-0.1.0-linux-kde-x86_64.tar.gz.sha256
-tar -xzf quick-swap-tools-0.1.0-linux-kde-x86_64.tar.gz
-cd quick-swap-tools-0.1.0-linux-kde-x86_64
+sha256sum -c lotpilot-0.2.0-linux-kde-x86_64.tar.gz.sha256
+tar -xzf lotpilot-0.2.0-linux-kde-x86_64.tar.gz
+cd lotpilot-0.2.0-linux-kde-x86_64
 ```
 
 The installer also verifies every bundled executable and payload against the
@@ -37,7 +41,7 @@ archive's internal `SHA256SUMS` file before making changes.
 
 The installer never requires root. It checks for unexpected shortcut conflicts before changing them, preserves the normal Plasma `Super+A` and `Super+G` assignments, and prints the path to the signed Firefox XPI.
 
-Open that XPI in Firefox and click **Add**. Quick Swap Tools then remains installed across Firefox restarts.
+Open that XPI in Firefox and click **Add**. LotPilot then remains installed across Firefox restarts.
 
 ## Controls
 
@@ -79,10 +83,10 @@ suppressed.
 
 Optional one-time programming is available with the open-source Linux
 **pedalctl/footswitch** tools (or the official Windows **FootSwitch** software).
-The mapping is stored persistently in pedal firmware. Quick Swap Tools also
+The mapping is stored persistently in pedal firmware. LotPilot also
 accepts **F20 = Auction**, **F22 = Inspect**, **F21 = Giveaway**, but F13+ output
 is firmware-dependent and not guaranteed; keep the A/B/C defaults unless the
-optional mapping is verified. Opening Quick Swap Tools never mutates hardware,
+optional mapping is verified. Opening LotPilot never mutates hardware,
 and this bundle does not include or download third-party programming binaries.
 
 If the pedal event node is not readable, install only these narrow `uaccess`
@@ -96,7 +100,7 @@ SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=
 
 ### Configure a keyboard, macro pad, or controller
 
-Open **Quick Swap Tools** from the application launcher, click a binding, and
+Open **LotPilot** from the application launcher, click a binding, and
 press the desired key or button. Click **Apply** only when both mappings are
 correct. Changes become active immediately and persist across restarts.
 
@@ -113,11 +117,11 @@ an external mapper such as Input Remapper or Steam Input first.
 ~/.local/lib/quick-swap-tools/uninstall.sh
 ```
 
-Then remove Quick Swap Tools from `about:addons` in Firefox.
+Then remove LotPilot from `about:addons` in Firefox.
 
 ## Source and license
 
 Corresponding source for this release:
-https://github.com/johndrcombs-cmd/quick-swap-tools/tree/v0.1.0
+https://github.com/johndrcombs-cmd/lotpilot/tree/v0.2.0
 
-Quick Swap Tools is licensed under GPL-3.0-or-later. See `LICENSE`.
+LotPilot is licensed under GPL-3.0-or-later. See `LICENSE`.

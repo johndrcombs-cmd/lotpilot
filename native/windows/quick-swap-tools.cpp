@@ -91,7 +91,7 @@ constexpr UINT kGiveawayHotkeyId = 2;
 constexpr UINT kInputClosedMessage = WM_APP + 1;
 constexpr UINT kReloadHotkeysMessage = WM_APP + 2;
 constexpr auto kBounceInterval = std::chrono::milliseconds(150);
-constexpr wchar_t kSettingsRegistryPath[] = L"Software\\OniByts\\Quick Swap Tools";
+constexpr wchar_t kSettingsRegistryPath[] = L"Software\\OniByts\\Quick Swap Tools"; // Legacy compatibility identifier.
 constexpr wchar_t kReloadEventName[] = L"Local\\OniByts.QuickSwapTools.Reload";
 constexpr wchar_t kReloadOkEventName[] = L"Local\\OniByts.QuickSwapTools.ReloadOk";
 constexpr wchar_t kReloadFailedEventName[] = L"Local\\OniByts.QuickSwapTools.ReloadFailed";
@@ -866,7 +866,7 @@ public:
             MessageBoxW(
                 nullptr,
                 L"The saved hotkey configuration is incomplete or invalid. Reinstall or repair it before making changes.",
-                L"Quick Swap Tools",
+                L"LotPilot",
                 MB_OK | MB_ICONERROR);
             return 2;
         }
@@ -890,7 +890,7 @@ public:
         window_ = CreateWindowExW(
             0,
             windowClass.lpszClassName,
-            L"Quick Swap Tools — Configure controls",
+            L"LotPilot — Configure controls",
             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
@@ -1033,7 +1033,7 @@ private:
     void createControls() {
         createControl(
             L"STATIC",
-            L"QUICK SWAP TOOLS",
+            L"LOTPILOT",
             SS_LEFT,
             28,
             22,
@@ -1256,25 +1256,25 @@ private:
             fullyRestored
                 ? L"Windows could not register both shortcuts. The previous bindings were restored. Choose different keys."
                 : L"Windows could not register the shortcuts and rollback could not be verified. Close Firefox and run the configurator again.",
-            L"Quick Swap Tools",
+            L"LotPilot",
             MB_OK | MB_ICONERROR);
         return false;
     }
 
     void apply() {
         if (!isValidHotkey(staged_.auction) || !isValidHotkey(staged_.giveaway)) {
-            MessageBoxW(window_, L"That key is reserved or cannot be used as a Windows global shortcut.", L"Quick Swap Tools", MB_OK | MB_ICONWARNING);
+            MessageBoxW(window_, L"That key is reserved or cannot be used as a Windows global shortcut.", L"LotPilot", MB_OK | MB_ICONWARNING);
             return;
         }
         if (staged_.auction == staged_.giveaway) {
-            MessageBoxW(window_, L"Auction and Giveaway must use different shortcuts.", L"Quick Swap Tools", MB_OK | MB_ICONWARNING);
+            MessageBoxW(window_, L"Auction and Giveaway must use different shortcuts.", L"LotPilot", MB_OK | MB_ICONWARNING);
             return;
         }
         if ((isRiskyUnmodified(staged_.auction) || isRiskyUnmodified(staged_.giveaway))
             && MessageBoxW(
                    window_,
                    L"An unmodified global key can trigger while you type in any application. Continue anyway?",
-                   L"Quick Swap Tools",
+                   L"LotPilot",
                    MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2) != IDYES) {
             return;
         }
@@ -1282,14 +1282,14 @@ private:
         if (!transactionLease.acquired()) {
             MessageBoxW(
                 window_,
-                L"Another Quick Swap Tools configurator is applying controls. Close it or wait for it to finish, then try again.",
-                L"Quick Swap Tools",
+                L"Another LotPilot configurator is applying controls. Close it or wait for it to finish, then try again.",
+                L"LotPilot",
                 MB_OK | MB_ICONWARNING);
             return;
         }
         const auto original = loadHotkeys();
         if (!original) {
-            MessageBoxW(window_, L"Could not read the existing bindings. Nothing was changed.", L"Quick Swap Tools", MB_OK | MB_ICONERROR);
+            MessageBoxW(window_, L"Could not read the existing bindings. Nothing was changed.", L"LotPilot", MB_OK | MB_ICONERROR);
             return;
         }
 
@@ -1299,7 +1299,7 @@ private:
             CloseHandle(runningHost);
         }
         if (!hostIsRunning && !probeHotkeys(staged_)) {
-            MessageBoxW(window_, L"One or both shortcuts are already reserved by Windows or another application. Nothing was changed.", L"Quick Swap Tools", MB_OK | MB_ICONWARNING);
+            MessageBoxW(window_, L"One or both shortcuts are already reserved by Windows or another application. Nothing was changed.", L"LotPilot", MB_OK | MB_ICONWARNING);
             return;
         }
 
@@ -1313,7 +1313,7 @@ private:
                 result.rollbackRestored
                     ? L"Saving failed. The previous bindings were restored."
                     : L"Saving failed and rollback could not be verified. Do not rely on the shortcuts until the installation is repaired.",
-                L"Quick Swap Tools",
+                L"LotPilot",
                 MB_OK | MB_ICONERROR);
             return;
         }

@@ -1,6 +1,6 @@
 # Third-party notices
 
-Quick Swap Tools includes the following third-party component in its Windows native binaries.
+LotPilot includes the following third-party component in its Windows native binaries.
 
 ## JSON for Modern C++
 

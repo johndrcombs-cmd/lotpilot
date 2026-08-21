@@ -41,7 +41,7 @@ class ReleaseInstallerTests(unittest.TestCase):
             "#!/bin/sh\nprintf 'configurator\\n'\n",
         )
         with zipfile.ZipFile(
-            self.bundle / "Quick-Swap-Tools-9.9.9-firefox.xpi", "w"
+            self.bundle / "LotPilot-9.9.9-firefox.xpi", "w"
         ) as archive:
             archive.writestr("manifest.json", "{}")
         self._write_executable(
@@ -59,7 +59,7 @@ class ReleaseInstallerTests(unittest.TestCase):
             "uninstall.sh",
             "README.md",
             "LICENSE",
-            "Quick-Swap-Tools-9.9.9-firefox.xpi",
+            "LotPilot-9.9.9-firefox.xpi",
         ]
         checksums = []
         for name in checksum_names:
@@ -86,7 +86,7 @@ class ReleaseInstallerTests(unittest.TestCase):
         self.assertTrue((install_root / "quick-swap-config").is_file())
         self.assertTrue((install_root / "uninstall.sh").is_file())
         self.assertTrue(
-            (install_root / "Quick-Swap-Tools-9.9.9-firefox.xpi").is_file()
+            (install_root / "LotPilot-9.9.9-firefox.xpi").is_file()
         )
         self.assertEqual(
             (self.home / ".local/state/quick-swap-tools").stat().st_mode & 0o777,

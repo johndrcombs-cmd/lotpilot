@@ -547,6 +547,7 @@ class WindowsConfiguratorTests(unittest.TestCase):
         self.assertIn("Logitech R400", strings)
         self.assertIn("Previous = Auction", strings)
         self.assertIn("Next = Giveaway", strings)
+        self.assertIn("LotPilot", strings)
 
 
 class WindowsInstallerPolicyTests(unittest.TestCase):
@@ -640,6 +641,14 @@ class WindowsInstallerPolicyTests(unittest.TestCase):
         self.assertNotIn("Get-CimInstance", uninstaller)
         self.assertIn("[string]::IsNullOrEmpty($ProcessPath)", uninstaller)
 
+    def test_uninstaller_accepts_strict_legacy_and_lotpilot_ownership(self):
+        uninstaller = (ROOT / "packaging" / "windows" / "uninstall.ps1").read_text()
+        self.assertIn('@("LotPilot", "Quick Swap Tools")', uninstaller)
+        self.assertIn('"Quick Swap Tools.lnk"', uninstaller)
+        self.assertIn('"LotPilot.lnk"', uninstaller)
+        self.assertIn('"Quick-Swap-Tools-*-firefox.xpi"', uninstaller)
+        self.assertIn('"LotPilot-*-firefox.xpi"', uninstaller)
+
     def test_development_bundle_contains_friend_installation_payload(self):
         compiler = "x86_64-w64-mingw32-g++"
         if shutil.which(compiler) is None and os.name == "nt":
@@ -677,7 +686,7 @@ class WindowsInstallerPolicyTests(unittest.TestCase):
                 env=build_environment,
             )
             archive = Path(temporary) / (
-                "quick-swap-tools-9.9.9-test-windows-x86_64-development.zip"
+                "lotpilot-9.9.9-test-windows-x86_64-development.zip"
             )
             self.assertTrue(archive.is_file())
             first_archive = archive.read_bytes()

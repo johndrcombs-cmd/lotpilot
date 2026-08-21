@@ -9,6 +9,7 @@ $ErrorActionPreference = "Stop"
 $HostName = "com.onibyts.quickswap"
 $ExtensionId = "quick-swap-tools@onibyts.com"
 $BundleRoot = $PSScriptRoot
+# Keep the legacy install root so pre-rebrand installs and saved settings remain compatible.
 $InstallRoot = Join-Path $env:LOCALAPPDATA "Programs\Quick Swap Tools"
 $ManifestPath = Join-Path $InstallRoot "$HostName.json"
 $RegistryPath = "HKCU:\Software\Mozilla\NativeMessagingHosts\$HostName"
@@ -17,7 +18,7 @@ $RegistryParentSubKey = "Software\Mozilla\NativeMessagingHosts"
 $RegistryStagingName = ".quick-swap-tools-$([Guid]::NewGuid().ToString('N'))"
 $RegistryStagingPath = Join-Path $RegistryParentPath $RegistryStagingName
 $StartMenuDirectory = [Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)
-$ShortcutPath = Join-Path $StartMenuDirectory "Quick Swap Tools.lnk"
+$ShortcutPath = Join-Path $StartMenuDirectory "LotPilot.lnk"
 $TemporaryShortcutPath = Join-Path $StartMenuDirectory ".quick-swap-tools-$([Guid]::NewGuid().ToString('N')).lnk"
 $StagingRoot = "$InstallRoot.install-$([Guid]::NewGuid().ToString('N'))"
 $InstallCreated = $false
@@ -27,7 +28,7 @@ $ShortcutCreated = $false
 $PublishedHashes = @{}
 $OwnedInstallFiles = @()
 $ExpectedShortcutTarget = Join-Path $InstallRoot "quick-swap-config.exe"
-$ExpectedShortcutDescription = "Configure Quick Swap Tools auction and giveaway controls"
+$ExpectedShortcutDescription = "Configure LotPilot auction and giveaway controls"
 $ExpectedSignerThumbprints = @() # Populate only when a project Authenticode identity is approved.
 
 if (-not ("QuickSwapRegistryNative" -as [type])) {
@@ -43,7 +44,7 @@ public static class QuickSwapRegistryNative {
 }
 
 function Fail([string]$Message) {
-    throw "Quick Swap Tools: $Message"
+    throw "LotPilot: $Message"
 }
 
 function Assert-SafeLocalPath([string]$Path, [string]$Description) {
@@ -194,7 +195,10 @@ try {
             Fail "bundle files must not be reparse points: $Name"
         }
     }
-    $XpiFiles = @(Get-ChildItem -LiteralPath $BundleRoot -Filter "Quick-Swap-Tools-*-firefox.xpi" -File)
+    $XpiFiles = @(
+        Get-ChildItem -LiteralPath $BundleRoot -File |
+            Where-Object { $_.Name -like "LotPilot-*-firefox.xpi" -or $_.Name -like "Quick-Swap-Tools-*-firefox.xpi" }
+    )
     if ($XpiFiles.Count -ne 1) {
         Fail "expected exactly one Mozilla-signed Firefox XPI"
     }
@@ -234,7 +238,7 @@ try {
 
     $Manifest = [ordered]@{
         name = $HostName
-        description = "Quick Swap Tools Windows hotkey bridge"
+        description = "LotPilot Windows hotkey bridge"
         path = (Join-Path $InstallRoot "quick-swap-tools.exe")
         type = "stdio"
         allowed_extensions = @($ExtensionId)
@@ -247,7 +251,7 @@ try {
     )
     $Owner = [ordered]@{
         schema = 1
-        product = "Quick Swap Tools"
+        product = "LotPilot"
         host = $HostName
         files = @(
             "quick-swap-tools.exe", "quick-swap-config.exe", "uninstall.ps1",
@@ -307,8 +311,8 @@ try {
         Fail "Firefox native-messaging registration verification failed"
     }
 
-    Write-Host "Quick Swap Tools was installed for the current user."
-    Write-Host "Configure controls from the Start Menu: Quick Swap Tools"
+    Write-Host "LotPilot was installed for the current user."
+    Write-Host "Configure controls from the Start Menu: LotPilot"
     Write-Host "Add the signed Firefox extension by opening: $($XpiFiles[0].Name)"
     Write-Host "Windows defaults: Ctrl+Shift+F9 for Auction; Ctrl+Shift+F10 for Giveaway."
 } catch {

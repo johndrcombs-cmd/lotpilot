@@ -91,6 +91,6 @@ browser.runtime.onStartup.addListener(connectNativeHost);
 browser.runtime.onInstalled.addListener(connectNativeHost);
 browser.browserAction.onClicked.addListener(async () => {
   const result = await handleCommand({ type: 'command', id: 'toolbar', action: 'status' });
-  console.info('Quick Swap Tools:', result.message || result.error);
+  console.info('LotPilot:', result.message || result.error);
 });
 connectNativeHost();

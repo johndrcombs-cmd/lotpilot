@@ -9,7 +9,7 @@ EXTENSION_ID="quick-swap-tools@onibyts.com"
 DESKTOP_ENTRY="$HOME/.local/share/applications/quick-swap-tools.desktop"
 
 fail() {
-  printf 'Quick Swap Tools: %s\n' "$*" >&2
+  printf 'LotPilot: %s\n' "$*" >&2
   exit 1
 }
 
@@ -18,7 +18,7 @@ command -v kwriteconfig6 >/dev/null || fail "KDE Plasma 6 command kwriteconfig6 
 command -v python3 >/dev/null || fail "Python 3 is required for installation"
 
 [[ ! -e "$INSTALL_ROOT" ]] || fail "an installation already exists; run its uninstall.sh first"
-[[ ! -e "$STATE_ROOT" ]] || fail "old installer state exists at $STATE_ROOT; remove it after confirming Quick Swap Tools is uninstalled"
+[[ ! -e "$STATE_ROOT" ]] || fail "old installer state exists at $STATE_ROOT; remove it after confirming LotPilot is uninstalled"
 [[ ! -e "$HOME/.mozilla/native-messaging-hosts/$HOST_NAME.json" ]] || \
   fail "a Firefox native-host manifest already exists; uninstall the prior version first"
 [[ ! -e "$HOME/.config/mozilla/native-messaging-hosts/$HOST_NAME.json" ]] || \
@@ -98,7 +98,7 @@ from pathlib import Path
 host, extension_id, *destinations = sys.argv[1:]
 manifest = {
     "name": "com.onibyts.quickswap",
-    "description": "Quick Swap Tools KDE hotkey bridge",
+    "description": "LotPilot KDE hotkey bridge",
     "path": host,
     "type": "stdio",
     "allowed_extensions": [extension_id],
@@ -115,7 +115,7 @@ PY
 cat >"$DESKTOP_ENTRY" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Quick Swap Tools
+Name=LotPilot
 Comment=Configure Whatnot auction and giveaway controls
 Exec="$INSTALL_ROOT/quick-swap-config"
 Icon=preferences-desktop-keyboard-shortcuts
@@ -126,7 +126,7 @@ EOF
 ROLLBACK_NEEDED=false
 trap - EXIT
 
-printf '\nQuick Swap Tools development build installed.\n'
+printf '\nLotPilot development build installed.\n'
 printf 'Firefox extension manifest: %s\n' "$INSTALL_ROOT/extension/manifest.json"
 printf 'Super+A: next auction | Super+G: next giveaway\n'
 printf 'Configure controls with: %s\n' "$INSTALL_ROOT/quick-swap-config"

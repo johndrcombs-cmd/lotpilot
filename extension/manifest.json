@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "Quick Swap Tools",
-  "version": "0.1.0",
-  "description": "Low-latency auction and giveaway controls for Whatnot seller streams.",
+  "name": "LotPilot",
+  "version": "0.2.0",
+  "description": "Hands-free auction and giveaway controls for Whatnot live sellers.",
   "permissions": [
     "nativeMessaging",
     "tabs",
@@ -20,7 +20,7 @@
     }
   ],
   "browser_action": {
-    "default_title": "Quick Swap Tools"
+    "default_title": "LotPilot"
   },
   "browser_specific_settings": {
     "gecko": {

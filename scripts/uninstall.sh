@@ -23,5 +23,5 @@ rm -f \
   "$HOME/.local/share/applications/quick-swap-tools.desktop"
 rm -rf "$STATE_ROOT"
 
-printf 'Quick Swap Tools removed. Original Meta+A/Meta+G settings were restored in KDE config.\n'
+printf 'LotPilot removed. Original Meta+A/Meta+G settings were restored in KDE config.\n'
 printf 'Log out and back in if KDE still shows a stale shortcut registration.\n'

@@ -25,5 +25,5 @@ rm -f \
   "$HOME/.local/share/applications/quick-swap-tools.desktop"
 rm -rf "$STATE_ROOT"
 
-printf 'Quick Swap Tools removed. Previous Meta+A and Meta+G settings were restored.\n'
+printf 'LotPilot removed. Previous Meta+A and Meta+G settings were restored.\n'
 printf 'Remove the Firefox add-on from about:addons if it is still installed.\n'

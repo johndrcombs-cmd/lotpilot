@@ -1,6 +1,8 @@
-# Quick Swap Tools
+# LotPilot
 
-Quick Swap Tools is a separate, low-latency control path for Whatnot seller streams in Firefox on KDE Plasma/Wayland and Windows.
+**Hands-free controls for Whatnot live sellers.** LotPilot provides a separate,
+low-latency path for starting the next auction or giveaway in Firefox on KDE
+Plasma/Wayland and Windows.
 
 ## Controls
 
@@ -25,7 +27,7 @@ The host applies only a 150 ms hardware key-bounce filter. Distinct presses are 
 
 ## Configure controls
 
-Open **Quick Swap Tools** from KDE's application launcher or the Windows Start Menu. Click the auction or
+Open **LotPilot** from KDE's application launcher or the Windows Start Menu. Click the auction or
 giveaway binding, press the desired keyboard, macro-pad, or controller button,
 then click **Apply**. The configurator checks for duplicate and system-wide
 conflicts, warns before accepting potentially disruptive unmodified keys, and
@@ -40,7 +42,7 @@ The Razer Tartarus Pro appears to Linux and Windows as a keyboard, so its keys c
 recorded directly. The operating system sees the key emitted by the device rather than the
 physical label such as “Key 20.” To keep a binding specific in practice, map
 the Tartarus or controller button to an unused key such as `F13`–`F24`, then
-record that key in Quick Swap Tools. A gamepad that emits only joystick-button
+record that key in LotPilot. A gamepad that emits only joystick-button
 events needs Input Remapper, Steam Input, or a similar keyboard mapper first.
 
 On Windows, a built-in Raw Input profile recognizes the Logitech R400 receiver
@@ -81,7 +83,7 @@ SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="046d", ATTRS{idProduct}=
 
 The iKKEGOL Upgraded 2023 Digital Optical USB Triple Foot Pedal (Amazon ASIN
 `B0CD3ZS7G2`, model `10149C`) works out of the box as a standard HID keyboard.
-Quick Swap Tools accepts only the known pedal USB IDs `3553:b001` and
+LotPilot accepts only the known pedal USB IDs `3553:b001` and
 `1a86:e026`, on their keyboard event interface. The factory keys need no
 programming: **A = Auction**, **B = Inspect** (the existing safe no-click
 inspection command), and **C = Giveaway**. Input is observed without grabbing
@@ -89,10 +91,10 @@ or suppressing ordinary keyboard delivery.
 
 If desired, program the pedal once with the official Windows **FootSwitch**
 software or the open-source Linux **pedalctl/footswitch** tools. Mappings are
-stored in pedal firmware and persist when moved between computers. Quick Swap
-Tools also accepts the optional convention **F20 = Auction**, **F22 = Inspect**,
+stored in pedal firmware and persist when moved between computers. LotPilot also
+accepts the optional convention **F20 = Auction**, **F22 = Inspect**,
 **F21 = Giveaway**, but some firmware revisions emit media actions for keys
-above F12; the A/B/C defaults are therefore recommended. Quick Swap Tools never
+above F12; the A/B/C defaults are therefore recommended. LotPilot never
 writes pedal firmware or downloads/vendor-bundles a programming utility.
 
 Linux needs read access to the specific pedal event node. Use your
@@ -123,20 +125,27 @@ Windows 10/11 x64 support is currently available as an **unsigned development bu
 pnpm run build:windows:bundle
 ```
 
-The resulting `dist/windows/quick-swap-tools-*-windows-x86_64-development.zip` contains two framework-free Win32 executables, a checksum-verifying per-user PowerShell installer, an ownership-checking uninstaller, and Windows-specific instructions. Installation uses `%LOCALAPPDATA%\Programs\Quick Swap Tools` and only the exact current-user Firefox native-messaging registry key. It does not request administrator access.
+The resulting `dist/windows/lotpilot-*-windows-x86_64-development.zip` contains two framework-free Win32 executables, a checksum-verifying per-user PowerShell installer, an ownership-checking uninstaller, and Windows-specific instructions. The `%LOCALAPPDATA%\Programs\Quick Swap Tools` installation directory is retained as a compatibility internal so existing installs and saved settings remain usable; the Start Menu displays **LotPilot**. Registration is limited to the exact current-user Firefox native-messaging key and does not request administrator access.
+
+Until AMO credentials are available, this development bundle may contain the
+Mozilla-signed 0.1.0 extension renamed
+`LotPilot-0.1.0-legacy-signed-compat-firefox.xpi`. Firefox will still show its
+old Quick Swap Tools manifest name. It keeps the stable extension ID but is
+clearly a compatibility artifact and does not match the branded 0.2.0 source.
 
 Unsigned executables may trigger SmartScreen. A public Windows release remains blocked on Authenticode signing and a real Windows 10/11 Firefox end-to-end test. See [`packaging/windows/README.md`](packaging/windows/README.md) for development installation details and controller limitations.
 
 ## Install a signed release
 
-Download the `quick-swap-tools-*-linux-kde-x86_64.tar.gz` bundle and matching
+After a branded 0.2.0 XPI has been signed, download the
+`lotpilot-*-linux-kde-x86_64.tar.gz` bundle and matching
 `.sha256` sidecar from the [latest GitHub release](../../releases/latest), then
 verify and extract it:
 
 ```bash
-sha256sum -c quick-swap-tools-0.1.0-linux-kde-x86_64.tar.gz.sha256
-tar -xzf quick-swap-tools-0.1.0-linux-kde-x86_64.tar.gz
-cd quick-swap-tools-0.1.0-linux-kde-x86_64
+sha256sum -c lotpilot-0.2.0-linux-kde-x86_64.tar.gz.sha256
+tar -xzf lotpilot-0.2.0-linux-kde-x86_64.tar.gz
+cd lotpilot-0.2.0-linux-kde-x86_64
 ./install.sh
 ```
 
@@ -167,19 +176,22 @@ The source installer:
 - installs the Firefox native-host manifest;
 - packages the extension;
 - backs up the prior `Super+A` and `Super+G` KDE assignments;
-- assigns the shortcuts to Quick Swap Tools.
+- assigns the shortcuts to LotPilot.
 
 Before installation, `Super+A` walked through Plasma Activities and `Super+G` opened Grid View. Those bindings are saved and the uninstall script restores them.
 
-### Install a locally signed Firefox release
+### Branded Firefox release signing
 
-After installing the native host, open the Mozilla-signed XPI in Firefox and approve installation:
+The 0.2.0 branded source expects this artifact after Mozilla signing:
 
 ```text
-dist/release/Quick-Swap-Tools-0.1.0-firefox.xpi
+dist/release/LotPilot-0.2.0-firefox.xpi
 ```
 
-The signed release stays installed across Firefox restarts. It has the permanent extension ID `quick-swap-tools@onibyts.com`.
+That branded signed XPI does not exist yet. Do not substitute or relabel the old
+signed 0.1.0 XPI as a source-matching 0.2.0 release. Once signed, the update will
+install in place because the permanent extension ID remains
+`quick-swap-tools@onibyts.com`.
 
 ### Temporary development builds only
 
@@ -216,7 +228,7 @@ cat ~/.local/state/quick-swap-tools/last-result.json
 
 ## Whatnot selector safety
 
-Quick Swap Tools re-queries the live React DOM for every action. It uses visible, enabled controls and exact normalized labels rather than generated CSS classes. The script first selects the requested `Auction`/`Auctions` or `Giveaway`/`Giveaways` tab. It waits for Whatnot's React UI to finish changing modes, then uses one unique visible action control. Current accepted action labels are:
+LotPilot re-queries the live React DOM for every action. It uses visible, enabled controls and exact normalized labels rather than generated CSS classes. The script first selects the requested `Auction`/`Auctions` or `Giveaway`/`Giveaways` tab. It waits for Whatnot's React UI to finish changing modes, then uses one unique visible action control. Current accepted action labels are:
 
 - `Start next auction`
 - `Run next auction`
@@ -261,5 +273,5 @@ pnpm run build:release
 
 Copyright © 2026 OniByts.
 
-Quick Swap Tools is free software licensed under the GNU General Public License,
+LotPilot is free software licensed under the GNU General Public License,
 version 3 or any later version (`GPL-3.0-or-later`). See [`LICENSE`](LICENSE).

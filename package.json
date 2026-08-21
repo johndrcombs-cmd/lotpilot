@@ -1,8 +1,8 @@
 {
-  "name": "quick-swap-tools",
-  "version": "0.1.0",
+  "name": "lotpilot",
+  "version": "0.2.0",
   "private": true,
-  "description": "Low-latency global controls for Whatnot seller streams in Firefox",
+  "description": "Hands-free auction and giveaway controls for Whatnot live sellers",
   "author": "OniByts",
   "scripts": {
     "build:native": "bash scripts/build-native.sh",
@@ -17,7 +17,7 @@
     "test:js": "node --test tests/*.test.js",
     "test:python": "python3 -m unittest discover -s tests -p 'test_*.py' -v",
     "test:windows": "npm run build:windows && python3 tests/test_windows_distribution.py -v",
-    "check": "npm run lint:extension && npm run test && python3 -m py_compile native/quick_swap.py tests/test_config_app.py tests/test_native.py tests/test_native_host.py tests/test_release_installer.py tests/test_source_installer.py"
+    "check": "npm run lint:extension && npm run test && python3 -m py_compile native/quick_swap.py tests/test_branding.py tests/test_config_app.py tests/test_native.py tests/test_native_host.py tests/test_release_installer.py tests/test_source_installer.py tests/test_windows_distribution.py"
   },
   "engines": {
     "node": ">=20"

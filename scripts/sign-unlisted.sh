@@ -3,6 +3,10 @@ set -euo pipefail
 
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 ARTIFACTS="$ROOT/dist/signed"
+VERSION=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
+  "$ROOT/package.json")
+SIGNING_STAGE=$(mktemp -d)
+trap 'rm -rf "$SIGNING_STAGE"' EXIT
 
 if [[ -z "${AMO_JWT_ISSUER:-}" ]]; then
   read -r -p "AMO JWT issuer: " AMO_JWT_ISSUER
@@ -30,13 +34,18 @@ unset AMO_JWT_ISSUER AMO_JWT_SECRET
 
 pnpm exec web-ext sign \
   --source-dir extension \
-  --artifacts-dir "$ARTIFACTS" \
+  --artifacts-dir "$SIGNING_STAGE" \
   --channel unlisted \
   --approval-timeout 900000 \
   --no-input
 
-printf '%s\n' 'Signed artifacts:'
 shopt -s nullglob
-for artifact in "$ARTIFACTS"/*.xpi; do
-  printf '  %s\n' "$artifact"
-done
+SIGNED_XPIS=("$SIGNING_STAGE"/*.xpi)
+shopt -u nullglob
+[[ ${#SIGNED_XPIS[@]} -eq 1 ]] || {
+  printf 'Expected exactly one signed XPI from Mozilla.\n' >&2
+  exit 1
+}
+SIGNED_ARTIFACT="$ARTIFACTS/LotPilot-$VERSION-firefox.xpi"
+install -m 0600 "${SIGNED_XPIS[0]}" "$SIGNED_ARTIFACT"
+printf 'Signed artifact:\n  %s\n' "$SIGNED_ARTIFACT"

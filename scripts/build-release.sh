@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 VERSION=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
   "$ROOT/package.json")
-XPI=${1:-"$ROOT/dist/release/Quick-Swap-Tools-$VERSION-firefox.xpi"}
-BUNDLE_NAME="quick-swap-tools-$VERSION-linux-kde-x86_64"
+XPI=${1:-"$ROOT/dist/release/LotPilot-$VERSION-firefox.xpi"}
+BUNDLE_NAME="lotpilot-$VERSION-linux-kde-x86_64"
 STAGE="$ROOT/dist/release/$BUNDLE_NAME"
 ARCHIVE="$ROOT/dist/release/$BUNDLE_NAME.tar.gz"
 
@@ -71,12 +71,12 @@ install -m 0755 "$ROOT/packaging/linux-kde/install.sh" "$STAGE/install.sh"
 install -m 0755 "$ROOT/packaging/linux-kde/uninstall.sh" "$STAGE/uninstall.sh"
 install -m 0644 "$ROOT/packaging/linux-kde/README.md" "$STAGE/README.md"
 install -m 0644 "$ROOT/LICENSE" "$STAGE/LICENSE"
-install -m 0644 "$XPI" "$STAGE/Quick-Swap-Tools-$VERSION-firefox.xpi"
+install -m 0644 "$XPI" "$STAGE/LotPilot-$VERSION-firefox.xpi"
 (
   cd "$STAGE"
   sha256sum \
     quick-swap-host quick-swap-config install.sh uninstall.sh README.md LICENSE \
-    "Quick-Swap-Tools-$VERSION-firefox.xpi" > SHA256SUMS
+    "LotPilot-$VERSION-firefox.xpi" > SHA256SUMS
 )
 tar --sort=name --owner=0 --group=0 --numeric-owner \
   -C "$ROOT/dist/release" -czf "$ARCHIVE" "$BUNDLE_NAME"
