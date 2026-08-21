@@ -99,10 +99,13 @@ constexpr wchar_t kStopEventName[] = L"Local\\OniByts.QuickSwapTools.Stop";
 constexpr wchar_t kHotkeyOwnerMutexName[] = L"Local\\OniByts.QuickSwapTools.HotkeyOwner.v1";
 constexpr wchar_t kConfiguratorMutexName[] = L"Local\\OniByts.QuickSwapTools.Configurator.v1";
 constexpr wchar_t kLogitechR400DeviceId[] = L"VID_046D&PID_C538&MI_00";
+constexpr wchar_t kIkkegolFootPedalFirstId[] = L"VID_1A86&PID_E026";
+constexpr wchar_t kIkkegolFootPedalSecondId[] = L"VID_3553&PID_B001";
 
 enum class PhysicalAction {
     none,
     auction,
+    inspect,
     giveaway,
 };
 
@@ -130,6 +133,75 @@ PhysicalAction logitechR400Action(std::wstring_view deviceName, UINT virtualKey)
     return PhysicalAction::none;
 }
 
+bool containsDeviceIdToken(std::wstring_view text, std::wstring_view expected) {
+    std::wstring foldedText(text);
+    std::wstring foldedExpected(expected);
+    const auto fold = [](wchar_t character) {
+        return static_cast<wchar_t>(std::towupper(character));
+    };
+    std::transform(foldedText.begin(), foldedText.end(), foldedText.begin(), fold);
+    std::transform(
+        foldedExpected.begin(), foldedExpected.end(), foldedExpected.begin(), fold);
+    const std::size_t position = foldedText.find(foldedExpected);
+    if (position == std::wstring::npos) {
+        return false;
+    }
+    const std::size_t end = position + foldedExpected.size();
+    const bool beginsAtBoundary = position == 0
+        || foldedText[position - 1] == L'#'
+        || foldedText[position - 1] == L'\\';
+    const bool endsAtBoundary = end == foldedText.size()
+        || foldedText[end] == L'&'
+        || foldedText[end] == L'#'
+        || foldedText[end] == L'\\';
+    return beginsAtBoundary && endsAtBoundary;
+}
+
+bool isIkkegolFootPedal(std::wstring_view deviceName) {
+    return containsDeviceIdToken(deviceName, kIkkegolFootPedalFirstId)
+        || containsDeviceIdToken(deviceName, kIkkegolFootPedalSecondId);
+}
+
+PhysicalAction ikkegolFootPedalAction(
+    std::wstring_view deviceName, UINT virtualKey) {
+    if (!isIkkegolFootPedal(deviceName)) {
+        return PhysicalAction::none;
+    }
+    if (virtualKey == 'A' || virtualKey == VK_F20) {
+        return PhysicalAction::auction;
+    }
+    if (virtualKey == 'B' || virtualKey == VK_F22) {
+        return PhysicalAction::inspect;
+    }
+    if (virtualKey == 'C' || virtualKey == VK_F21) {
+        return PhysicalAction::giveaway;
+    }
+    return PhysicalAction::none;
+}
+
+PhysicalAction physicalDeviceAction(
+    std::wstring_view deviceName, UINT virtualKey) {
+    const PhysicalAction r400 = logitechR400Action(deviceName, virtualKey);
+    return r400 != PhysicalAction::none
+        ? r400
+        : ikkegolFootPedalAction(deviceName, virtualKey);
+}
+
+bool updatePhysicalKeyState(
+    PhysicalAction action,
+    UINT virtualKey,
+    bool released,
+    std::unordered_set<UINT> &pressedKeys) {
+    if (action == PhysicalAction::none) {
+        return false;
+    }
+    if (released) {
+        pressedKeys.erase(virtualKey);
+        return false;
+    }
+    return pressedKeys.insert(virtualKey).second;
+}
+
 bool isRawKeyboardPacketSizeValid(UINT size) {
     constexpr std::size_t minimum = offsetof(RAWINPUT, data) + sizeof(RAWKEYBOARD);
     return size >= minimum && size <= 64U * 1024U;
@@ -145,6 +217,8 @@ const char *physicalActionName(PhysicalAction action) {
     switch (action) {
     case PhysicalAction::auction:
         return "auction";
+    case PhysicalAction::inspect:
+        return "inspect";
     case PhysicalAction::giveaway:
         return "giveaway";
     default:
@@ -185,6 +259,57 @@ int runLogitechR400ProfileSelfTest() {
               << "}\n";
     return matchedDevice && otherDeviceIgnored && otherKeyIgnored
             && keyboardPacketSizeAccepted && reservedHotkeysRejected
+        ? 0
+        : 1;
+}
+
+int runIkkegolFootPedalProfileSelfTest() {
+    constexpr std::wstring_view first =
+        LR"(\\?\hid#vid_1a86&pid_e026&mi_00#test)";
+    constexpr std::wstring_view second =
+        LR"(\\?\hid#vid_3553&pid_b001#test)";
+    const auto names = [](std::wstring_view device, const std::vector<UINT> &keys) {
+        nlohmann::json actions = nlohmann::json::array();
+        for (const UINT key : keys) {
+            actions.push_back(physicalActionName(ikkegolFootPedalAction(device, key)));
+        }
+        return actions;
+    };
+    const nlohmann::json defaultActions = names(first, {'A', 'B', 'C'});
+    const nlohmann::json optionalActions = names(second, {VK_F20, VK_F22, VK_F21});
+    const bool firstIdMatched = isIkkegolFootPedal(first);
+    const bool secondIdMatched = isIkkegolFootPedal(second);
+    const bool otherDeviceIgnored = ikkegolFootPedalAction(
+        LR"(\\?\hid#vid_3553&pid_b002#test)", 'A') == PhysicalAction::none
+        && ikkegolFootPedalAction(
+            LR"(\\?\hid#vid_3553&pid_b0010#test)", 'A') == PhysicalAction::none;
+    const bool otherKeyIgnored = ikkegolFootPedalAction(first, VK_F19)
+        == PhysicalAction::none;
+    std::unordered_set<UINT> pressed;
+    const bool firstPress = updatePhysicalKeyState(
+        PhysicalAction::auction, 'A', false, pressed);
+    const bool repeatedPress = updatePhysicalKeyState(
+        PhysicalAction::auction, 'A', false, pressed);
+    const bool release = updatePhysicalKeyState(
+        PhysicalAction::auction, 'A', true, pressed);
+    const bool secondPress = updatePhysicalKeyState(
+        PhysicalAction::auction, 'A', false, pressed);
+    const bool pressReleaseSuppression = firstPress && !repeatedPress
+        && !release && secondPress;
+    const nlohmann::json result{
+        {"firstIdMatched", firstIdMatched},
+        {"secondIdMatched", secondIdMatched},
+        {"defaultActions", defaultActions},
+        {"optionalActions", optionalActions},
+        {"otherDeviceIgnored", otherDeviceIgnored},
+        {"otherKeyIgnored", otherKeyIgnored},
+        {"pressReleaseSuppression", pressReleaseSuppression},
+    };
+    std::cout << result.dump() << '\n';
+    return firstIdMatched && secondIdMatched
+            && defaultActions == nlohmann::json::array({"auction", "inspect", "giveaway"})
+            && optionalActions == nlohmann::json::array({"auction", "inspect", "giveaway"})
+            && otherDeviceIgnored && otherKeyIgnored && pressReleaseSuppression
         ? 0
         : 1;
 }
@@ -770,7 +895,7 @@ public:
             CW_USEDEFAULT,
             CW_USEDEFAULT,
             720,
-            550,
+            700,
             nullptr,
             nullptr,
             instance_,
@@ -969,7 +1094,7 @@ private:
             bodyBoldFont_);
         createControl(
             L"STATIC",
-            L"Logitech R400",
+            L"USB device profiles",
             SS_LEFT,
             48,
             338,
@@ -979,25 +1104,25 @@ private:
             eyebrowFont_);
         createControl(
             L"STATIC",
-            L"Previous = Auction  •  Next = Giveaway. Page Up/Down stay available to the foreground app and are reserved here.",
+            L"iKKEGOL works with no programming: A = Auction, B = Inspect (safe/no click), C = Giveaway. Opening this app never changes firmware. Optional firmware-dependent mapping: F20 = Auction, F22 = Inspect, F21 = Giveaway. Logitech R400 remains Previous = Auction, Next = Giveaway.",
             SS_LEFT,
             48,
             368,
             590,
-            48,
+            150,
             kMutedLabel);
         statusLabel_ = createControl(
             L"STATIC",
             L"Current mappings loaded from Windows.",
             SS_LEFT | SS_CENTERIMAGE,
             28,
-            452,
+            602,
             340,
             40,
             kStatusLabel);
-        createControl(L"BUTTON", L"Apply changes", BS_OWNERDRAW | WS_TABSTOP, 382, 452, 132, 40, kApplyButton, bodyBoldFont_);
-        createControl(L"BUTTON", L"Reset", BS_OWNERDRAW | WS_TABSTOP, 524, 452, 76, 40, kResetButton, bodyBoldFont_);
-        createControl(L"BUTTON", L"Close", BS_OWNERDRAW | WS_TABSTOP, 610, 452, 70, 40, kCloseButton, bodyBoldFont_);
+        createControl(L"BUTTON", L"Apply changes", BS_OWNERDRAW | WS_TABSTOP, 382, 602, 132, 40, kApplyButton, bodyBoldFont_);
+        createControl(L"BUTTON", L"Reset", BS_OWNERDRAW | WS_TABSTOP, 524, 602, 76, 40, kResetButton, bodyBoldFont_);
+        createControl(L"BUTTON", L"Close", BS_OWNERDRAW | WS_TABSTOP, 610, 602, 70, 40, kCloseButton, bodyBoldFont_);
     }
 
     static void drawRoundedPanel(
@@ -1030,7 +1155,7 @@ private:
         GetClientRect(window_, &client);
         FillRect(dc, &client, windowBackgroundBrush_);
         drawRoundedPanel(dc, RECT{28, 132, 680, 310}, kSurfaceBackground, kBorderColor, 16);
-        drawRoundedPanel(dc, RECT{28, 324, 680, 432}, kSurfaceBackground, kBorderColor, 16);
+        drawRoundedPanel(dc, RECT{28, 324, 680, 570}, kSurfaceBackground, kBorderColor, 16);
     }
 
     void drawButton(const DRAWITEMSTRUCT &item) const {
@@ -1451,6 +1576,9 @@ private:
     }
 
     void openLogitechR400Input() {
+        if (_wgetenv(L"QUICK_SWAP_NO_HARDWARE_INPUT") != nullptr) {
+            return;
+        }
         constexpr wchar_t className[] = L"OniBytsQuickSwapRawInput";
         const HINSTANCE instance = GetModuleHandleW(nullptr);
         WNDCLASSW windowClass{};
@@ -1503,8 +1631,7 @@ private:
         DestroyWindow(rawInputWindow_);
         rawInputWindow_ = nullptr;
         r400InputRegistered_.store(false);
-        r400PreviousPressed_ = false;
-        r400NextPressed_ = false;
+        pressedPhysicalKeys_.clear();
     }
 
     static std::wstring rawInputDeviceName(HANDLE device) {
@@ -1555,28 +1682,22 @@ private:
             return;
         }
         const std::wstring deviceName = rawInputDeviceName(input->header.hDevice);
-        const PhysicalAction action = logitechR400Action(
+        const PhysicalAction action = physicalDeviceAction(
             deviceName,
             input->data.keyboard.VKey);
-        bool *pressed = nullptr;
-        if (action == PhysicalAction::auction) {
-            pressed = &r400PreviousPressed_;
-        } else if (action == PhysicalAction::giveaway) {
-            pressed = &r400NextPressed_;
-        } else {
+        const bool released = (input->data.keyboard.Flags & RI_KEY_BREAK) != 0;
+        if (!updatePhysicalKeyState(
+                action,
+                input->data.keyboard.VKey,
+                released,
+                pressedPhysicalKeys_)) {
             return;
         }
-        if ((input->data.keyboard.Flags & RI_KEY_BREAK) != 0) {
-            *pressed = false;
-            return;
-        }
-        if (*pressed) {
-            return;
-        }
-        *pressed = true;
         if (action == PhysicalAction::auction) {
             trigger("auction", auctionLastRun_);
-        } else {
+        } else if (action == PhysicalAction::inspect) {
+            trigger("inspect", inspectLastRun_);
+        } else if (action == PhysicalAction::giveaway) {
             trigger("giveaway", giveawayLastRun_);
         }
     }
@@ -1674,6 +1795,8 @@ private:
                       << R"(,"giveawayShortcut":)"
                       << (giveawayRegistered_ ? "true" : "false")
                       << R"(,"logitechR400":)"
+                      << (r400InputRegistered_.load() ? "true" : "false")
+                      << R"(,"ikkegolFootPedal":)"
                       << (r400InputRegistered_.load() ? "true" : "false") << '}';
                 writeFrame(ready.str());
             }
@@ -1749,14 +1872,14 @@ private:
     bool outputStopping_ = false;
     std::chrono::steady_clock::time_point auctionLastRun_{};
     std::chrono::steady_clock::time_point giveawayLastRun_{};
+    std::chrono::steady_clock::time_point inspectLastRun_{};
     HANDLE reloadEvent_ = nullptr;
     HANDLE reloadOkEvent_ = nullptr;
     HANDLE reloadFailedEvent_ = nullptr;
     HANDLE stopEvent_ = nullptr;
     HANDLE hotkeyOwnerMutex_ = nullptr;
     HWND rawInputWindow_ = nullptr;
-    bool r400PreviousPressed_ = false;
-    bool r400NextPressed_ = false;
+    std::unordered_set<UINT> pressedPhysicalKeys_;
     bool ownsHotkeyMutex_ = false;
     UINT_PTR ownershipTimerId_ = 0;
 };
@@ -1780,6 +1903,9 @@ int runHost() {
     }
     if (argc == 2 && mode == L"--self-test-r400-profile") {
         return runLogitechR400ProfileSelfTest();
+    }
+    if (argc == 2 && mode == L"--self-test-ikkegol-profile") {
+        return runIkkegolFootPedalProfileSelfTest();
     }
     if (argc == 2 && mode == L"--dump-effective-hotkeys") {
         return dumpEffectiveHotkeys();

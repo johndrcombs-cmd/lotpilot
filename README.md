@@ -10,10 +10,16 @@ Quick Swap Tools is a separate, low-latency control path for Whatnot seller stre
 | Linux/KDE | `Super+G` | Start the next giveaway |
 | Linux + Logitech R400 | Previous | Start the next auction |
 | Linux + Logitech R400 | Next | Start the next giveaway |
+| Linux + iKKEGOL triple pedal | Left (`A`) | Start the next auction |
+| Linux + iKKEGOL triple pedal | Middle (`B`) | Inspect controls safely (no click) |
+| Linux + iKKEGOL triple pedal | Right (`C`) | Start the next giveaway |
 | Windows | `Ctrl+Shift+F9` | Start the next auction |
 | Windows | `Ctrl+Shift+F10` | Start the next giveaway |
 | Windows + Logitech R400 | Previous | Start the next auction |
 | Windows + Logitech R400 | Next | Start the next giveaway |
+| Windows + iKKEGOL triple pedal | Left (`A`) | Start the next auction |
+| Windows + iKKEGOL triple pedal | Middle (`B`) | Inspect controls safely (no click) |
+| Windows + iKKEGOL triple pedal | Right (`C`) | Start the next giveaway |
 
 The host applies only a 150 ms hardware key-bounce filter. Distinct presses are queued, while duplicate delivery of the same command ID is suppressed. The page script refuses to click when the matching control is hidden, disabled, covered, missing, or ambiguous.
 
@@ -69,6 +75,33 @@ manager does not refresh the ACL immediately:
 
 ```text
 SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c538", TAG+="uaccess"
+```
+
+### iKKEGOL B0CD3ZS7G2 triple foot pedal
+
+The iKKEGOL Upgraded 2023 Digital Optical USB Triple Foot Pedal (Amazon ASIN
+`B0CD3ZS7G2`, model `10149C`) works out of the box as a standard HID keyboard.
+Quick Swap Tools accepts only the known pedal USB IDs `3553:b001` and
+`1a86:e026`, on their keyboard event interface. The factory keys need no
+programming: **A = Auction**, **B = Inspect** (the existing safe no-click
+inspection command), and **C = Giveaway**. Input is observed without grabbing
+or suppressing ordinary keyboard delivery.
+
+If desired, program the pedal once with the official Windows **FootSwitch**
+software or the open-source Linux **pedalctl/footswitch** tools. Mappings are
+stored in pedal firmware and persist when moved between computers. Quick Swap
+Tools also accepts the optional convention **F20 = Auction**, **F22 = Inspect**,
+**F21 = Giveaway**, but some firmware revisions emit media actions for keys
+above F12; the A/B/C defaults are therefore recommended. Quick Swap Tools never
+writes pedal firmware or downloads/vendor-bundles a programming utility.
+
+Linux needs read access to the specific pedal event node. Use your
+distribution's administrator workflow to install only narrow `uaccess` rules,
+then reconnect the pedal (do not grant an input group or world-readable access):
+
+```text
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="3553", ATTRS{idProduct}=="b001", TAG+="uaccess"
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="e026", TAG+="uaccess"
 ```
 
 ## Why this architecture

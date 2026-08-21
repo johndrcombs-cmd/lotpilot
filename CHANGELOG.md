@@ -4,6 +4,9 @@ All notable changes to Quick Swap Tools are documented here.
 
 ## Unreleased
 
+- Add device-filtered iKKEGOL B0CD3ZS7G2 triple-pedal support on Linux and
+  Windows for USB IDs `3553:b001` and `1a86:e026`: factory A/B/C maps to
+  Auction/safe Inspect/Giveaway, with optional firmware-dependent F20/F22/F21.
 - Add device-filtered Logitech R400 support on Linux: Previous starts the next
   auction and Next starts the next giveaway without suppressing normal Page
   Up/Page Down delivery or accepting those keys from other keyboards.

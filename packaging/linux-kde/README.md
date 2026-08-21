@@ -45,6 +45,9 @@ Open that XPI in Firefox and click **Add**. Quick Swap Tools then remains instal
 - `Super+G`: switch to Giveaways and start the next giveaway.
 - Logitech R400 Previous: switch to Auctions and start the next auction.
 - Logitech R400 Next: switch to Giveaways and start the next giveaway.
+- iKKEGOL left (`A`): start the next auction.
+- iKKEGOL middle (`B`): run safe Inspect (no click).
+- iKKEGOL right (`C`): start the next giveaway.
 
 The R400 profile matches only the `046d:c538` Logitech USB Receiver. It does
 not grab or suppress the device, so Page Up/Page Down continue to reach the
@@ -63,6 +66,32 @@ devices:
 
 ```text
 SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c538", TAG+="uaccess"
+```
+
+### iKKEGOL B0CD3ZS7G2 triple pedal
+
+The iKKEGOL model `10149C` (ASIN `B0CD3ZS7G2`) is supported only at the known
+USB IDs `3553:b001` and `1a86:e026` and only through a matching keyboard event
+interface. Its shipped HID keyboard defaults require no programming:
+**A = Auction**, **B = Inspect** (safe/no click), **C = Giveaway**. The host
+reads press events without grabbing the device, so normal A/B/C delivery is not
+suppressed.
+
+Optional one-time programming is available with the open-source Linux
+**pedalctl/footswitch** tools (or the official Windows **FootSwitch** software).
+The mapping is stored persistently in pedal firmware. Quick Swap Tools also
+accepts **F20 = Auction**, **F22 = Inspect**, **F21 = Giveaway**, but F13+ output
+is firmware-dependent and not guaranteed; keep the A/B/C defaults unless the
+optional mapping is verified. Opening Quick Swap Tools never mutates hardware,
+and this bundle does not include or download third-party programming binaries.
+
+If the pedal event node is not readable, install only these narrow `uaccess`
+rules through your distribution's administrator workflow and reconnect it.
+Never use broad input-group or world-readable permissions:
+
+```text
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="3553", ATTRS{idProduct}=="b001", TAG+="uaccess"
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="e026", TAG+="uaccess"
 ```
 
 ### Configure a keyboard, macro pad, or controller

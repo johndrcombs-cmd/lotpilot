@@ -25,6 +25,9 @@ The installer verifies every payload checksum, the extension ID, and expected Mo
 - **Ctrl+Shift+F10** — start the next Giveaway
 - **Logitech R400 Previous** — start the next Auction
 - **Logitech R400 Next** — start the next Giveaway
+- **iKKEGOL left (`A`)** — start the next Auction
+- **iKKEGOL middle (`B`)** — safe Inspect (no click)
+- **iKKEGOL right (`C`)** — start the next Giveaway
 
 Windows reserves many `Win+…` shortcuts, including common combinations such as `Win+A` and `Win+G`, so the Windows defaults intentionally differ from Linux.
 
@@ -40,6 +43,30 @@ unassigned. Windows still delivers the R400's ordinary Page Up/Page Down keys to
 the foreground application. Page Up and Page Down are reserved and cannot also
 be configured as global hotkeys, preventing one R400 press from producing
 conflicting actions.
+
+### iKKEGOL B0CD3ZS7G2 triple pedal
+
+The iKKEGOL model `10149C` (ASIN `B0CD3ZS7G2`) works without programming. The
+device-filtered Raw Input profile accepts only known USB IDs `3553:b001` and
+`1a86:e026`: **A = Auction**, **B = Inspect** (the existing safe no-click
+command), and **C = Giveaway**. Windows still delivers those normal keyboard
+events to the foreground application; Quick Swap Tools does not use
+`RIDEV_NOLEGACY`.
+
+For optional one-time changes, use iKKEGOL's official Windows **FootSwitch**
+software. It writes the mapping to pedal firmware, where it persists across
+reboots and computers. Quick Swap Tools also recognizes the convention
+**F20 = Auction**, **F22 = Inspect**, **F21 = Giveaway**, but output above F12
+is firmware-dependent and is not guaranteed on every revision. The shipped
+A/B/C defaults are recommended. Opening the configurator never writes hardware,
+and the bundle neither vendors nor downloads programming software. Linux users
+can program with open-source **pedalctl/footswitch**; Linux event-read access
+must use narrow per-ID `uaccess` rules, never broad input-group/world access:
+
+```text
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="3553", ATTRS{idProduct}=="b001", TAG+="uaccess"
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="e026", TAG+="uaccess"
+```
 
 ### Tartarus, macro pads, and controllers
 

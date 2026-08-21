@@ -6,9 +6,36 @@ from pathlib import Path
 ROOT = Path(__file__).parents[1]
 LINUX_CONFIG = ROOT / "native" / "quick-swap-config.cpp"
 WINDOWS_CONFIG = ROOT / "native" / "windows" / "quick-swap-tools.cpp"
+README = ROOT / "README.md"
+LINUX_PACKAGING = ROOT / "packaging" / "linux-kde" / "README.md"
+WINDOWS_PACKAGING = ROOT / "packaging" / "windows" / "README.md"
 
 
 class DesktopDarkThemeSourceTests(unittest.TestCase):
+    def test_both_configurators_explain_no_programming_pedal_defaults(self):
+        for source_path in (LINUX_CONFIG, WINDOWS_CONFIG):
+            source = source_path.read_text()
+            self.assertIn("iKKEGOL", source)
+            self.assertIn("A = Auction", source)
+            self.assertIn("B = Inspect", source)
+            self.assertIn("C = Giveaway", source)
+            self.assertIn("no programming", source.lower())
+            self.assertIn("F20", source)
+            self.assertIn("firmware", source.lower())
+
+    def test_pedal_docs_cover_ids_programming_persistence_and_narrow_permissions(self):
+        for path in (README, LINUX_PACKAGING, WINDOWS_PACKAGING):
+            text = path.read_text()
+            self.assertIn("B0CD3ZS7G2", text)
+            self.assertIn("3553:b001", text.lower())
+            self.assertIn("1a86:e026", text.lower())
+            self.assertIn("A = Auction", text)
+            self.assertIn("B = Inspect", text)
+            self.assertIn("C = Giveaway", text)
+            self.assertIn("firmware", text.lower())
+        self.assertIn("FootSwitch", WINDOWS_PACKAGING.read_text())
+        self.assertIn("pedalctl", LINUX_PACKAGING.read_text())
+        self.assertIn('TAG+="uaccess"', LINUX_PACKAGING.read_text())
     def test_linux_configurator_uses_fixed_modern_dark_theme(self):
         source = LINUX_CONFIG.read_text()
 

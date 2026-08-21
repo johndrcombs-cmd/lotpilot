@@ -515,8 +515,8 @@ int runGui(int argc, char **argv) {
 
     QDialog dialog;
     dialog.setWindowTitle(QStringLiteral("Quick Swap Tools — Controls"));
-    dialog.setMinimumSize(660, 590);
-    dialog.resize(700, 640);
+    dialog.setMinimumSize(660, 680);
+    dialog.resize(700, 720);
 
     auto *layout = new QVBoxLayout(&dialog);
     layout->setContentsMargins(28, 26, 28, 24);
@@ -577,10 +577,12 @@ int runGui(int argc, char **argv) {
     deviceTitle->setObjectName(QStringLiteral("sectionTitle"));
     deviceLayout->addWidget(deviceTitle);
     auto *deviceNote = new QLabel(QStringLiteral(
-        "The Logitech R400 works directly: Previous starts Auction and Next starts "
-        "Giveaway. Keyboard-style devices such as the Razer Tartarus also work; "
-        "map their buttons to unused keys such as F13–F24. Page Up and Page Down "
-        "are reserved for the R400."));
+        "The iKKEGOL triple pedal works with no programming: A = Auction, "
+        "B = Inspect (safe, no click), C = Giveaway. Opening this app never changes "
+        "pedal firmware. An optional firmware-dependent profile also accepts "
+        "F20 = Auction, F22 = Inspect, F21 = Giveaway. The Logitech R400 still "
+        "works directly: Previous = Auction and Next = Giveaway; Page Up and "
+        "Page Down remain reserved for the R400."));
     deviceNote->setObjectName(QStringLiteral("muted"));
     deviceNote->setWordWrap(true);
     deviceLayout->addWidget(deviceNote);

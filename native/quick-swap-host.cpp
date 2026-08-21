@@ -48,17 +48,17 @@ bool isLogitechR400(const input_id &device, const QString &name) {
         && name == QStringLiteral("Logitech USB Receiver");
 }
 
-bool isLogitechR400Interface(const QByteArray &number) {
+bool isKeyboardInterface(const QByteArray &number) {
     return number.trimmed() == QByteArrayLiteral("00");
 }
 
-bool isLogitechR400Interface(dev_t deviceNumber) {
+bool isKeyboardInterface(dev_t deviceNumber) {
     QString current = QFileInfo(QStringLiteral("/sys/dev/char/%1:%2/device")
         .arg(major(deviceNumber)).arg(minor(deviceNumber))).canonicalFilePath();
     while (!current.isEmpty() && current != QStringLiteral("/")) {
         QFile number(QDir(current).filePath(QStringLiteral("bInterfaceNumber")));
         if (number.open(QIODevice::ReadOnly)) {
-            return isLogitechR400Interface(number.readAll());
+            return isKeyboardInterface(number.readAll());
         }
         current = QFileInfo(current).dir().absolutePath();
     }
@@ -72,6 +72,50 @@ bool hasLogitechR400Keys(const unsigned long *bits, std::size_t count) {
             && (bits[key / wordBits] & (1UL << (key % wordBits))) != 0;
     };
     return present(KEY_PAGEUP) && present(KEY_PAGEDOWN);
+}
+
+bool isIkkegolFootPedal(const input_id &device) {
+    return device.bustype == BUS_USB
+        && ((device.vendor == 0x1a86 && device.product == 0xe026)
+            || (device.vendor == 0x3553 && device.product == 0xb001));
+}
+
+bool hasIkkegolFootPedalKeys(const unsigned long *bits, std::size_t count) {
+    constexpr std::size_t wordBits = sizeof(unsigned long) * 8;
+    const auto present = [=](unsigned int key) {
+        return key / wordBits < count
+            && (bits[key / wordBits] & (1UL << (key % wordBits))) != 0;
+    };
+    const bool abc = present(KEY_A) && present(KEY_B) && present(KEY_C);
+    const bool functionKeys = present(KEY_F20) && present(KEY_F21) && present(KEY_F22);
+    return abc || functionKeys;
+}
+
+enum class HardwareProfile {
+    none,
+    logitechR400,
+    ikkegolFootPedal,
+};
+
+HardwareProfile hardwareProfile(const input_id &device, const QString &name) {
+    if (isLogitechR400(device, name)) {
+        return HardwareProfile::logitechR400;
+    }
+    if (isIkkegolFootPedal(device)) {
+        return HardwareProfile::ikkegolFootPedal;
+    }
+    return HardwareProfile::none;
+}
+
+bool hasProfileKeys(
+    HardwareProfile profile, const unsigned long *bits, std::size_t count) {
+    if (profile == HardwareProfile::logitechR400) {
+        return hasLogitechR400Keys(bits, count);
+    }
+    if (profile == HardwareProfile::ikkegolFootPedal) {
+        return hasIkkegolFootPedalKeys(bits, count);
+    }
+    return false;
 }
 
 QString decodeEvdevName(const char *bytes, int length) {
@@ -97,14 +141,47 @@ QString logitechR400Action(
     return {};
 }
 
-enum class R400ReadResult {
+QString ikkegolFootPedalAction(
+    const input_id &device,
+    const input_event &event) {
+    if (!isIkkegolFootPedal(device) || event.type != EV_KEY || event.value != 1) {
+        return {};
+    }
+    if (event.code == KEY_A || event.code == KEY_F20) {
+        return QStringLiteral("auction");
+    }
+    if (event.code == KEY_B || event.code == KEY_F22) {
+        return QStringLiteral("inspect");
+    }
+    if (event.code == KEY_C || event.code == KEY_F21) {
+        return QStringLiteral("giveaway");
+    }
+    return {};
+}
+
+QString hardwareAction(
+    HardwareProfile profile,
+    const input_id &device,
+    const QString &name,
+    const input_event &event) {
+    if (profile == HardwareProfile::logitechR400) {
+        return logitechR400Action(device, name, event);
+    }
+    if (profile == HardwareProfile::ikkegolFootPedal) {
+        return ikkegolFootPedalAction(device, event);
+    }
+    return {};
+}
+
+enum class HardwareReadResult {
     drained,
     disconnected,
     invalid,
 };
 
-R400ReadResult readLogitechR400Events(
+HardwareReadResult readHardwareEvents(
     int descriptor,
+    HardwareProfile profile,
     const input_id &device,
     const QString &name,
     const std::function<void(const QString &)> &onAction) {
@@ -113,12 +190,13 @@ R400ReadResult readLogitechR400Events(
         const ssize_t count = ::read(descriptor, events.data(), sizeof(events));
         if (count > 0) {
             if (count % static_cast<ssize_t>(sizeof(input_event)) != 0) {
-                return R400ReadResult::invalid;
+                return HardwareReadResult::invalid;
             }
             const std::size_t eventCount = static_cast<std::size_t>(count)
                 / sizeof(input_event);
             for (std::size_t index = 0; index < eventCount; ++index) {
-                const QString action = logitechR400Action(device, name, events[index]);
+                const QString action = hardwareAction(
+                    profile, device, name, events[index]);
                 if (!action.isEmpty()) {
                     onAction(action);
                 }
@@ -126,14 +204,14 @@ R400ReadResult readLogitechR400Events(
             continue;
         }
         if (count == 0) {
-            return R400ReadResult::disconnected;
+            return HardwareReadResult::disconnected;
         }
         if (errno == EINTR) {
             continue;
         }
         return errno == EAGAIN || errno == EWOULDBLOCK
-            ? R400ReadResult::drained
-            : R400ReadResult::disconnected;
+            ? HardwareReadResult::drained
+            : HardwareReadResult::disconnected;
     }
 }
 
@@ -153,8 +231,8 @@ int runLogitechR400ProfileSelfTest() {
     constexpr char kernelName[] = "Logitech USB Receiver";
     const bool kernelNameMatched = isLogitechR400(
         r400, decodeEvdevName(kernelName, sizeof(kernelName)));
-    const bool interfaceMatched = isLogitechR400Interface("00\n");
-    const bool otherInterfaceIgnored = !isLogitechR400Interface("01\n");
+    const bool interfaceMatched = isKeyboardInterface("00\n");
+    const bool otherInterfaceIgnored = !isKeyboardInterface("01\n");
     std::array<unsigned long, (KEY_MAX / (sizeof(unsigned long) * 8)) + 1> keyBits{};
     constexpr std::size_t wordBits = sizeof(unsigned long) * 8;
     keyBits[KEY_PAGEUP / wordBits] |= 1UL << (KEY_PAGEUP % wordBits);
@@ -187,9 +265,81 @@ int runLogitechR400ProfileSelfTest() {
         : 1;
 }
 
-class R400OwnerLease final {
+int runIkkegolFootPedalProfileSelfTest() {
+    const input_id first{BUS_USB, 0x1a86, 0xe026, 0x0111};
+    const input_id second{BUS_USB, 0x3553, 0xb001, 0x0111};
+    const input_id other{BUS_USB, 0x1a86, 0xe027, 0x0111};
+    const auto action = [](const input_id &device, quint16 code, qint32 value) {
+        input_event event{};
+        event.type = EV_KEY;
+        event.code = code;
+        event.value = value;
+        return ikkegolFootPedalAction(device, event);
+    };
+    std::array<unsigned long, (KEY_MAX / (sizeof(unsigned long) * 8)) + 1> defaultBits{};
+    std::array<unsigned long, (KEY_MAX / (sizeof(unsigned long) * 8)) + 1> optionalBits{};
+    constexpr std::size_t wordBits = sizeof(unsigned long) * 8;
+    for (const unsigned int key : {KEY_A, KEY_B, KEY_C}) {
+        defaultBits[key / wordBits] |= 1UL << (key % wordBits);
+    }
+    for (const unsigned int key : {KEY_F20, KEY_F21, KEY_F22}) {
+        optionalBits[key / wordBits] |= 1UL << (key % wordBits);
+    }
+    const QString defaultLeft = action(first, KEY_A, 1);
+    const QString defaultMiddle = action(first, KEY_B, 1);
+    const QString defaultRight = action(first, KEY_C, 1);
+    const QString optionalLeft = action(first, KEY_F20, 1);
+    const QString optionalMiddle = action(first, KEY_F22, 1);
+    const QString optionalRight = action(first, KEY_F21, 1);
+    const bool firstIdMatched = isIkkegolFootPedal(first);
+    const bool secondIdMatched = isIkkegolFootPedal(second);
+    const bool interfaceMatched = isKeyboardInterface("00\n");
+    const bool otherInterfaceIgnored = !isKeyboardInterface("01\n");
+    const bool defaultCapabilitiesMatched = hasIkkegolFootPedalKeys(
+        defaultBits.data(), defaultBits.size());
+    const bool optionalCapabilitiesMatched = hasIkkegolFootPedalKeys(
+        optionalBits.data(), optionalBits.size());
+    const bool otherDeviceIgnored = action(other, KEY_A, 1).isEmpty();
+    const bool otherKeyIgnored = action(first, KEY_F19, 1).isEmpty();
+    const bool releaseIgnored = action(first, KEY_A, 0).isEmpty();
+    const bool repeatIgnored = action(first, KEY_A, 2).isEmpty();
+    const QJsonObject result{
+        {QStringLiteral("firstIdMatched"), firstIdMatched},
+        {QStringLiteral("secondIdMatched"), secondIdMatched},
+        {QStringLiteral("interfaceMatched"), interfaceMatched},
+        {QStringLiteral("otherInterfaceIgnored"), otherInterfaceIgnored},
+        {QStringLiteral("defaultCapabilitiesMatched"), defaultCapabilitiesMatched},
+        {QStringLiteral("optionalCapabilitiesMatched"), optionalCapabilitiesMatched},
+        {QStringLiteral("defaultLeft"), defaultLeft},
+        {QStringLiteral("defaultMiddle"), defaultMiddle},
+        {QStringLiteral("defaultRight"), defaultRight},
+        {QStringLiteral("optionalLeft"), optionalLeft},
+        {QStringLiteral("optionalMiddle"), optionalMiddle},
+        {QStringLiteral("optionalRight"), optionalRight},
+        {QStringLiteral("otherDeviceIgnored"), otherDeviceIgnored},
+        {QStringLiteral("otherKeyIgnored"), otherKeyIgnored},
+        {QStringLiteral("releaseIgnored"), releaseIgnored},
+        {QStringLiteral("repeatIgnored"), repeatIgnored},
+    };
+    const QByteArray output = QJsonDocument(result).toJson(QJsonDocument::Compact) + '\n';
+    std::fwrite(output.constData(), 1, output.size(), stdout);
+    return firstIdMatched && secondIdMatched && interfaceMatched
+            && otherInterfaceIgnored && defaultCapabilitiesMatched
+            && optionalCapabilitiesMatched
+            && defaultLeft == QStringLiteral("auction")
+            && defaultMiddle == QStringLiteral("inspect")
+            && defaultRight == QStringLiteral("giveaway")
+            && optionalLeft == QStringLiteral("auction")
+            && optionalMiddle == QStringLiteral("inspect")
+            && optionalRight == QStringLiteral("giveaway")
+            && otherDeviceIgnored && otherKeyIgnored && releaseIgnored && repeatIgnored
+        ? 0
+        : 1;
+}
+
+class HardwareOwnerLease final {
 public:
-    explicit R400OwnerLease(const QByteArray &path) {
+    explicit HardwareOwnerLease(const QByteArray &path) {
         descriptor_ = ::open(
             path.constData(),
             O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW,
@@ -213,15 +363,15 @@ public:
         }
     }
 
-    ~R400OwnerLease() {
+    ~HardwareOwnerLease() {
         if (descriptor_ >= 0) {
             ::flock(descriptor_, LOCK_UN);
             ::close(descriptor_);
         }
     }
 
-    R400OwnerLease(const R400OwnerLease &) = delete;
-    R400OwnerLease &operator=(const R400OwnerLease &) = delete;
+    HardwareOwnerLease(const HardwareOwnerLease &) = delete;
+    HardwareOwnerLease &operator=(const HardwareOwnerLease &) = delete;
 
     [[nodiscard]] bool acquired() const {
         return descriptor_ >= 0;
@@ -243,12 +393,12 @@ int runLogitechR400OwnerSelfTest() {
     }
     const QByteArray path = QFile::encodeName(directory.filePath(
         QStringLiteral("r400-owner.lock")));
-    auto first = std::make_unique<R400OwnerLease>(path);
-    R400OwnerLease second(path);
+    auto first = std::make_unique<HardwareOwnerLease>(path);
+    HardwareOwnerLease second(path);
     const bool exclusive = first->acquired() && !second.acquired();
     const bool ownerOnly = first->ownerOnly();
     first.reset();
-    R400OwnerLease third(path);
+    HardwareOwnerLease third(path);
     const bool takeover = third.acquired();
     const QJsonObject result{
         {QStringLiteral("exclusive"), exclusive},
@@ -277,16 +427,56 @@ int runLogitechR400StreamSelfTest() {
     const ssize_t expected = static_cast<ssize_t>(sizeof(events));
     const ssize_t written = ::write(descriptors[1], events.data(), sizeof(events));
     QJsonArray actions;
-    const R400ReadResult readResult = readLogitechR400Events(
-        descriptors[0], r400, name, [&actions](const QString &action) {
+    const HardwareReadResult readResult = readHardwareEvents(
+        descriptors[0], HardwareProfile::logitechR400, r400, name,
+        [&actions](const QString &action) {
             actions.append(action);
         });
     ::close(descriptors[0]);
     ::close(descriptors[1]);
     const bool completeFrames = written == expected
-        && readResult == R400ReadResult::drained;
+        && readResult == HardwareReadResult::drained;
     const bool expectedActions = actions == QJsonArray{
         QStringLiteral("auction"), QStringLiteral("giveaway")};
+    const QJsonObject result{
+        {QStringLiteral("actions"), actions},
+        {QStringLiteral("completeFrames"), completeFrames},
+    };
+    const QByteArray output = QJsonDocument(result).toJson(QJsonDocument::Compact) + '\n';
+    std::fwrite(output.constData(), 1, output.size(), stdout);
+    return completeFrames && expectedActions ? 0 : 1;
+}
+
+int runIkkegolFootPedalStreamSelfTest() {
+    int descriptors[2] = {-1, -1};
+    if (::pipe2(descriptors, O_CLOEXEC | O_NONBLOCK) != 0) {
+        return 2;
+    }
+    const input_id pedal{BUS_USB, 0x3553, 0xb001, 0x0111};
+    std::array<input_event, 9> events{};
+    events[0] = input_event{{}, EV_KEY, KEY_A, 0};
+    events[1] = input_event{{}, EV_KEY, KEY_A, 2};
+    events[2] = input_event{{}, EV_KEY, KEY_F19, 1};
+    events[3] = input_event{{}, EV_SYN, SYN_REPORT, 0};
+    events[4] = input_event{{}, EV_KEY, KEY_A, 1};
+    events[5] = input_event{{}, EV_KEY, KEY_B, 1};
+    events[6] = input_event{{}, EV_KEY, KEY_C, 1};
+    events[7] = input_event{{}, EV_KEY, KEY_F20, 1};
+    events[8] = input_event{{}, EV_KEY, KEY_F22, 1};
+    const ssize_t expected = static_cast<ssize_t>(sizeof(events));
+    const ssize_t written = ::write(descriptors[1], events.data(), sizeof(events));
+    QJsonArray actions;
+    const HardwareReadResult readResult = readHardwareEvents(
+        descriptors[0], HardwareProfile::ikkegolFootPedal, pedal, {},
+        [&actions](const QString &action) { actions.append(action); });
+    ::close(descriptors[0]);
+    ::close(descriptors[1]);
+    const bool completeFrames = written == expected
+        && readResult == HardwareReadResult::drained;
+    const bool expectedActions = actions == QJsonArray{
+        QStringLiteral("auction"), QStringLiteral("inspect"),
+        QStringLiteral("giveaway"), QStringLiteral("auction"),
+        QStringLiteral("inspect")};
     const QJsonObject result{
         {QStringLiteral("actions"), actions},
         {QStringLiteral("completeFrames"), completeFrames},
@@ -338,6 +528,15 @@ bool shortcutsCanBeClaimed() {
     return true;
 }
 
+struct HardwareInput {
+    HardwareProfile profile = HardwareProfile::none;
+    int descriptor = -1;
+    input_id device{};
+    QString name;
+    QString path;
+    std::unique_ptr<QSocketNotifier> notifier;
+};
+
 class NativeHost final : public QObject {
 public:
     explicit NativeHost(bool forceRegistration, QObject *parent = nullptr)
@@ -372,17 +571,18 @@ public:
             readStdin();
         });
         if (!forceRegistration_) {
-            r400RetryTimer_.setInterval(1500);
-            connect(&r400RetryTimer_, &QTimer::timeout, this, [this] {
-                ensureLogitechR400Input();
+            hardwareRetryTimer_.setInterval(1500);
+            connect(&hardwareRetryTimer_, &QTimer::timeout, this, [this] {
+                ensureHardwareInput();
             });
-            ensureLogitechR400Input();
-            r400RetryTimer_.start();
+            ensureHardwareInput();
+            hardwareRetryTimer_.start();
         }
     }
 
     ~NativeHost() override {
-        closeLogitechR400Input();
+        closeHardwareInput(HardwareProfile::logitechR400);
+        closeHardwareInput(HardwareProfile::ikkegolFootPedal);
     }
 
     bool shortcutsRegistered() const {
@@ -390,8 +590,12 @@ public:
     }
 
 private:
-    void ensureLogitechR400Input() {
-        if (!r400Owner_) {
+    std::unique_ptr<HardwareInput> &inputSlot(HardwareProfile profile) {
+        return profile == HardwareProfile::logitechR400 ? r400Input_ : pedalInput_;
+    }
+
+    void ensureHardwareInput() {
+        if (!hardwareOwner_) {
             const QString runtimeDirectory = QStandardPaths::writableLocation(
                 QStandardPaths::RuntimeLocation);
             if (runtimeDirectory.isEmpty()) {
@@ -400,11 +604,11 @@ private:
             const QByteArray lockPath = QFile::encodeName(
                 QDir(runtimeDirectory).filePath(
                     QStringLiteral("quick-swap-tools-input-owner.lock")));
-            auto owner = std::make_unique<R400OwnerLease>(lockPath);
+            auto owner = std::make_unique<HardwareOwnerLease>(lockPath);
             if (!owner->acquired()) {
                 return;
             }
-            r400Owner_ = std::move(owner);
+            hardwareOwner_ = std::move(owner);
         }
         if (!auctionRegistered_) {
             auctionRegistered_ = registerShortcut(
@@ -415,10 +619,7 @@ private:
                 &giveawayAction_, QKeySequence(Qt::META | Qt::Key_G));
         }
         KGlobalAccel::self()->setShortcut(&inspectAction_, {});
-        if (qEnvironmentVariableIsSet("QUICK_SWAP_NO_R400")) {
-            return;
-        }
-        if (r400Descriptor_ >= 0) {
+        if (qEnvironmentVariableIsSet("QUICK_SWAP_NO_HARDWARE_INPUT")) {
             return;
         }
 
@@ -426,7 +627,12 @@ private:
         const QStringList candidates = inputDirectory.entryList(
             {QStringLiteral("event*")}, QDir::System | QDir::Files, QDir::Name);
         for (const QString &candidate : candidates) {
-            const QByteArray path = QFile::encodeName(inputDirectory.filePath(candidate));
+            const QString candidatePath = inputDirectory.filePath(candidate);
+            if ((r400Input_ && r400Input_->path == candidatePath)
+                || (pedalInput_ && pedalInput_->path == candidatePath)) {
+                continue;
+            }
+            const QByteArray path = QFile::encodeName(candidatePath);
             const int descriptor = ::open(
                 path.constData(), O_RDONLY | O_NONBLOCK | O_CLOEXEC | O_NOFOLLOW);
             if (descriptor < 0) {
@@ -448,46 +654,59 @@ private:
             }
             const QString name = decodeEvdevName(
                 nameBytes.data(), std::min<int>(nameLength, nameBytes.size()));
-            if (!isLogitechR400(device, name)
-                || !isLogitechR400Interface(metadata.st_rdev)
-                || !hasLogitechR400Keys(keyBits.data(), keyBits.size())) {
+            const HardwareProfile profile = hardwareProfile(device, name);
+            if (profile == HardwareProfile::none
+                || (profile == HardwareProfile::logitechR400
+                    && qEnvironmentVariableIsSet("QUICK_SWAP_NO_R400"))
+                || inputSlot(profile)
+                || !isKeyboardInterface(metadata.st_rdev)
+                || !hasProfileKeys(profile, keyBits.data(), keyBits.size())) {
                 ::close(descriptor);
                 continue;
             }
-            r400Descriptor_ = descriptor;
-            r400Device_ = device;
-            r400Name_ = name;
-            r400Notifier_ = std::make_unique<QSocketNotifier>(
-                r400Descriptor_, QSocketNotifier::Read);
-            connect(r400Notifier_.get(), &QSocketNotifier::activated, this, [this] {
-                handleLogitechR400Input();
-            });
-            return;
+            auto input = std::make_unique<HardwareInput>();
+            input->profile = profile;
+            input->descriptor = descriptor;
+            input->device = device;
+            input->name = name;
+            input->path = candidatePath;
+            HardwareInput *observed = input.get();
+            input->notifier = std::make_unique<QSocketNotifier>(
+                descriptor, QSocketNotifier::Read);
+            connect(input->notifier.get(), &QSocketNotifier::activated, this,
+                [this, observed] { handleHardwareInput(observed); });
+            inputSlot(profile) = std::move(input);
         }
     }
 
-    void handleLogitechR400Input() {
-        const R400ReadResult result = readLogitechR400Events(
-            r400Descriptor_, r400Device_, r400Name_, [this](const QString &action) {
+    void handleHardwareInput(HardwareInput *input) {
+        const HardwareProfile profile = input->profile;
+        const HardwareReadResult result = readHardwareEvents(
+            input->descriptor, profile, input->device, input->name,
+            [this](const QString &action) {
                 if (action == QStringLiteral("auction")) {
                     trigger(action, auctionLastRun_);
                 } else if (action == QStringLiteral("giveaway")) {
                     trigger(action, giveawayLastRun_);
+                } else if (action == QStringLiteral("inspect")) {
+                    trigger(action, inspectLastRun_);
                 }
             });
-        if (result != R400ReadResult::drained) {
-            closeLogitechR400Input();
+        if (result != HardwareReadResult::drained) {
+            closeHardwareInput(profile);
         }
     }
 
-    void closeLogitechR400Input() {
-        r400Notifier_.reset();
-        if (r400Descriptor_ >= 0) {
-            ::close(r400Descriptor_);
-            r400Descriptor_ = -1;
+    void closeHardwareInput(HardwareProfile profile) {
+        auto &input = inputSlot(profile);
+        if (!input) {
+            return;
         }
-        r400Device_ = {};
-        r400Name_.clear();
+        input->notifier.reset();
+        if (input->descriptor >= 0) {
+            ::close(input->descriptor);
+        }
+        input.reset();
     }
 
     bool registerShortcut(QAction *action, const QKeySequence &sequence) {
@@ -560,7 +779,8 @@ private:
                 {QStringLiteral("type"), QStringLiteral("ready")},
                 {QStringLiteral("auctionShortcut"), auctionRegistered_},
                 {QStringLiteral("giveawayShortcut"), giveawayRegistered_},
-                {QStringLiteral("logitechR400"), r400Descriptor_ >= 0},
+                {QStringLiteral("logitechR400"), r400Input_ != nullptr},
+                {QStringLiteral("ikkegolFootPedal"), pedalInput_ != nullptr},
             });
             return;
         }
@@ -607,19 +827,18 @@ private:
     }
 
     // Declared first so it is destroyed last, after QAction unregisters inputs.
-    std::unique_ptr<R400OwnerLease> r400Owner_;
+    std::unique_ptr<HardwareOwnerLease> hardwareOwner_;
     QAction auctionAction_;
     QAction giveawayAction_;
     QAction inspectAction_;
     QSocketNotifier stdinNotifier_;
-    QTimer r400RetryTimer_;
-    std::unique_ptr<QSocketNotifier> r400Notifier_;
-    int r400Descriptor_ = -1;
-    input_id r400Device_{};
-    QString r400Name_;
+    QTimer hardwareRetryTimer_;
+    std::unique_ptr<HardwareInput> r400Input_;
+    std::unique_ptr<HardwareInput> pedalInput_;
     QByteArray inputBuffer_;
     QElapsedTimer auctionLastRun_;
     QElapsedTimer giveawayLastRun_;
+    QElapsedTimer inspectLastRun_;
     bool forceRegistration_ = false;
     bool auctionRegistered_ = false;
     bool giveawayRegistered_ = false;
@@ -642,6 +861,12 @@ int main(int argc, char **argv) {
     }
     if (app.arguments().contains(QStringLiteral("--r400-stream-self-test"))) {
         return runLogitechR400StreamSelfTest();
+    }
+    if (app.arguments().contains(QStringLiteral("--ikkegol-profile-self-test"))) {
+        return runIkkegolFootPedalProfileSelfTest();
+    }
+    if (app.arguments().contains(QStringLiteral("--ikkegol-stream-self-test"))) {
+        return runIkkegolFootPedalStreamSelfTest();
     }
     if ((checkOnly || registerOnly) && !shortcutsCanBeClaimed()) {
         return 2;

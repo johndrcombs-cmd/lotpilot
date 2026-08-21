@@ -13,6 +13,64 @@ BINARY = ROOT / "build" / "quick-swap-host"
 
 
 class NativeHostIntegrationTests(unittest.TestCase):
+    def run_host_self_test(self, option: str):
+        return subprocess.run(
+            [str(BINARY), option],
+            capture_output=True,
+            check=False,
+            env={
+                **os.environ,
+                "QT_QPA_PLATFORM": "offscreen",
+                "QUICK_SWAP_NO_SHORTCUTS": "1",
+            },
+            text=True,
+            timeout=2,
+        )
+
+    def test_ikkegol_pedal_profile_filters_both_ids_and_maps_defaults_and_f_keys(self):
+        result = self.run_host_self_test("--ikkegol-profile-self-test")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            json.loads(result.stdout),
+            {
+                "firstIdMatched": True,
+                "secondIdMatched": True,
+                "interfaceMatched": True,
+                "otherInterfaceIgnored": True,
+                "defaultCapabilitiesMatched": True,
+                "optionalCapabilitiesMatched": True,
+                "defaultLeft": "auction",
+                "defaultMiddle": "inspect",
+                "defaultRight": "giveaway",
+                "optionalLeft": "auction",
+                "optionalMiddle": "inspect",
+                "optionalRight": "giveaway",
+                "otherDeviceIgnored": True,
+                "otherKeyIgnored": True,
+                "releaseIgnored": True,
+                "repeatIgnored": True,
+            },
+        )
+
+    def test_ikkegol_pedal_stream_emits_only_mapped_press_actions(self):
+        result = self.run_host_self_test("--ikkegol-stream-self-test")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            json.loads(result.stdout),
+            {
+                "actions": [
+                    "auction",
+                    "inspect",
+                    "giveaway",
+                    "auction",
+                    "inspect",
+                ],
+                "completeFrames": True,
+            },
+        )
+
     def test_logitech_r400_profile_is_device_filtered_and_press_only(self):
         env = {
             **os.environ,
@@ -88,7 +146,7 @@ class NativeHostIntegrationTests(unittest.TestCase):
             **os.environ,
             "QT_QPA_PLATFORM": "offscreen",
             "QUICK_SWAP_NO_SHORTCUTS": "1",
-            "QUICK_SWAP_NO_R400": "1",
+            "QUICK_SWAP_NO_HARDWARE_INPUT": "1",
         }
         process = subprocess.Popen(
             [str(BINARY)],
@@ -120,6 +178,7 @@ class NativeHostIntegrationTests(unittest.TestCase):
         self.assertFalse(message["auctionShortcut"])
         self.assertFalse(message["giveawayShortcut"])
         self.assertFalse(message["logitechR400"])
+        self.assertFalse(message["ikkegolFootPedal"])
 
     def test_persisted_result_omits_private_url_and_is_owner_only(self):
         with tempfile.TemporaryDirectory() as state_home:
@@ -127,7 +186,7 @@ class NativeHostIntegrationTests(unittest.TestCase):
                 **os.environ,
                 "QT_QPA_PLATFORM": "offscreen",
                 "QUICK_SWAP_NO_SHORTCUTS": "1",
-                "QUICK_SWAP_NO_R400": "1",
+                "QUICK_SWAP_NO_HARDWARE_INPUT": "1",
                 "XDG_STATE_HOME": state_home,
             }
             process = subprocess.Popen(

@@ -137,6 +137,29 @@ class WindowsHotkeyValidationTests(unittest.TestCase):
         self.assertIn("RI_KEY_BREAK", source)
         self.assertGreaterEqual(source.count("DispatchMessageW(&message);"), 2)
 
+    def test_ikkegol_profile_maps_default_and_optional_keys_for_both_ids(self):
+        result = subprocess.run(
+            [*WINDOWS_RUNNER, str(WINDOWS_BINARY), "--self-test-ikkegol-profile"],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env={**os.environ, "WINEDEBUG": "-all"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            json.loads(result.stdout),
+            {
+                "firstIdMatched": True,
+                "secondIdMatched": True,
+                "defaultActions": ["auction", "inspect", "giveaway"],
+                "optionalActions": ["auction", "inspect", "giveaway"],
+                "otherDeviceIgnored": True,
+                "otherKeyIgnored": True,
+                "pressReleaseSuppression": True,
+            },
+        )
+
     def test_effective_windows_defaults_avoid_reserved_windows_key_combinations(self):
         result = subprocess.run(
             [*WINDOWS_RUNNER, str(WINDOWS_BINARY), "--dump-effective-hotkeys"],
@@ -225,6 +248,7 @@ class WindowsNativeHostTests(unittest.TestCase):
             self.assertFalse(message["auctionShortcut"])
             self.assertFalse(message["giveawayShortcut"])
             self.assertFalse(message["logitechR400"])
+            self.assertFalse(message["ikkegolFootPedal"])
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -438,6 +462,7 @@ class WindowsNativeHostTests(unittest.TestCase):
             self.assertTrue(message["auctionShortcut"])
             self.assertTrue(message["giveawayShortcut"])
             self.assertTrue(message["logitechR400"])
+            self.assertTrue(message["ikkegolFootPedal"])
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -480,6 +505,10 @@ class WindowsNativeHostTests(unittest.TestCase):
                 [state["logitechR400"] for state in readiness],
                 states,
             )
+            self.assertEqual(
+                [state["ikkegolFootPedal"] for state in readiness],
+                states,
+            )
             owner = processes[states.index(True)]
             waiter = processes[states.index(False)]
             assert owner.stdin is not None
@@ -489,6 +518,7 @@ class WindowsNativeHostTests(unittest.TestCase):
             waiter_ready = hello(waiter)
             self.assertTrue(waiter_ready["auctionShortcut"])
             self.assertTrue(waiter_ready["logitechR400"])
+            self.assertTrue(waiter_ready["ikkegolFootPedal"])
         finally:
             for process in processes:
                 if process.poll() is None:
