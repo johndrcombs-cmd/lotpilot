@@ -24,6 +24,6 @@
   },
   "license": "GPL-3.0-or-later",
   "devDependencies": {
-    "web-ext": "10.5.0"
+    "web-ext": "10.8.0"
   }
 }
